@@ -4,7 +4,7 @@ const data = @embedFile("day4.txt");
 const Card = struct {
     n: u32,
     copies: u32,
-    winning: []u32,
+    winning: std.AutoHashMap(u32, void),
     numbers: []u32,
 };
 
@@ -13,14 +13,11 @@ pub fn solve1(input: []Card) u32 {
     for (input) |c| {
         var score: u32 = 0;
         for (c.numbers) |n| {
-            for (c.winning) |wn| {
-                if (n == wn) {
-                    if (score == 0) {
-                        score = 1;
-                    } else {
-                        score *= 2;
-                    }
-                    break;
+            if (c.winning.get(n)) |_| {
+                if (score == 0) {
+                    score = 1;
+                } else {
+                    score *= 2;
                 }
             }
         }
@@ -34,10 +31,8 @@ pub fn solve2(input: []Card) u32 {
     for (input, 0..) |c, i| {
         var matches: u32 = 0;
         for (c.numbers) |n| {
-            for (c.winning) |wn| {
-                if (n == wn) {
-                    matches += 1;
-                }
+            if (c.winning.get(n)) |_| {
+                matches += 1;
             }
         }
 
@@ -64,9 +59,9 @@ pub fn parse(input: []const u8) ![]Card {
         var winning = std.mem.tokenizeScalar(u8, std.mem.trim(u8, numbers.next().?, " "), ' ');
         var my_numbers = std.mem.tokenizeScalar(u8, std.mem.trim(u8, numbers.next().?, " "), ' ');
 
-        var winnig_list = std.ArrayList(u32).init(std.heap.page_allocator);
+        var winnig_list = std.AutoHashMap(u32, void).init(std.heap.page_allocator);
         while (winning.next()) |w| {
-            try winnig_list.append(try std.fmt.parseInt(u32, w, 10));
+            try winnig_list.put(try std.fmt.parseInt(u32, w, 10), void{});
         }
 
         var my_numbers_list = std.ArrayList(u32).init(std.heap.page_allocator);
@@ -77,7 +72,7 @@ pub fn parse(input: []const u8) ![]Card {
         try res.append(Card{
             .n = n,
             .copies = 1,
-            .winning = try winnig_list.toOwnedSlice(),
+            .winning = winnig_list,
             .numbers = try my_numbers_list.toOwnedSlice(),
         });
     }
