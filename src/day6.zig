@@ -1,0 +1,101 @@
+const std = @import("std");
+const data = @embedFile("day6.txt");
+const alloc = std.heap.page_allocator;
+
+const Race = struct {
+    time: usize,
+    dist: usize,
+
+    pub fn run(self: Race, hold_for: usize) usize {
+        return hold_for * (self.time - hold_for);
+    }
+
+    pub fn nways(self: Race) usize {
+        var res: usize = 0;
+        for (1..self.time) |i| {
+            if (self.run(i) > self.dist) {
+                res += 1;
+            }
+        }
+        return res;
+    }
+};
+
+pub fn solve1(input: []Race) usize {
+    var res: usize = 1;
+    for (input) |r| {
+        res *= r.nways();
+    }
+    return res;
+}
+
+pub fn solve2(input: Race) usize {
+    return input.nways();
+}
+
+pub fn parse2(input: []const u8) !Race {
+    var time: usize = 0;
+    var dist: usize = 0;
+    var lines = std.mem.tokenizeScalar(u8, input, '\n');
+
+    for (lines.next().?[5..]) |t| {
+        if (t == ' ') {
+            continue;
+        }
+        time *= 10;
+        time += t - '0';
+    }
+    for (lines.next().?[9..]) |t| {
+        if (t == ' ') {
+            continue;
+        }
+        dist *= 10;
+        dist += t - '0';
+    }
+    return Race{
+        .time = time,
+        .dist = dist,
+    };
+}
+
+pub fn parse(input: []const u8) ![]Race {
+    var res = std.ArrayList(Race).init(alloc);
+    var lines = std.mem.tokenizeScalar(u8, input, '\n');
+    var times = std.mem.tokenizeScalar(u8, std.mem.trim(u8, lines.next().?[5..], " "), ' ');
+    var dists = std.mem.tokenizeScalar(u8, std.mem.trim(u8, lines.next().?[9..], " "), ' ');
+
+    while (true) {
+        if (times.next()) |t| {
+            try res.append(Race{
+                .time = try std.fmt.parseInt(usize, t, 10),
+                .dist = try std.fmt.parseInt(usize, dists.next().?, 10),
+            });
+        } else {
+            break;
+        }
+    }
+
+    return res.toOwnedSlice();
+}
+
+pub fn main() !void {
+    const input = try parse(data);
+    const input2 = try parse2(data);
+    std.debug.print("Part1: {}\n", .{solve1(input)});
+    std.debug.print("Part2: {}\n", .{solve2(input2)});
+}
+
+const test_data =
+    \\Time:      7  15   30
+    \\Distance:  9  40  200
+;
+
+test "test-1" {
+    const res: usize = solve1(try parse(test_data));
+    try std.testing.expectEqual(res, 288);
+}
+
+test "test-2" {
+    const res: usize = solve2(try parse2(test_data));
+    try std.testing.expectEqual(res, 71503);
+}
