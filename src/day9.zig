@@ -2,71 +2,58 @@ const std = @import("std");
 const data = @embedFile("day9.txt");
 const alloc = std.heap.page_allocator;
 
-pub fn solve1(input: [][]i32) !i32 {
-    var res: i32 = 0;
-    for (input) |l| {
-        var new_l = l;
-        var all_last = std.ArrayList(i32).init(alloc);
-        try all_last.append(@intCast(l[l.len - 1]));
-        while (true) {
-            var new_line = std.ArrayList(i32).init(alloc);
-            for (new_l[1..], 1..) |_, i| {
-                try new_line.append(@intCast(new_l[i] - new_l[i - 1]));
+pub fn solve(input: []i32, last: bool) []i32 {
+    var l = input;
+    var single = std.ArrayList(i32).init(alloc);
+    if (last) {
+        single.append(@intCast(input[input.len - 1])) catch unreachable;
+    } else {
+        single.append(@intCast(input[0])) catch unreachable;
+    }
+    while (true) {
+        var new_line = std.ArrayList(i32).init(alloc);
+        for (l[1..], 1..) |_, i| {
+            new_line.append(@intCast(l[i] - l[i - 1])) catch unreachable;
+        }
+        if (last) {
+            single.append(@intCast(new_line.getLast())) catch unreachable;
+        } else {
+            single.append(@intCast(new_line.items[0])) catch unreachable;
+        }
+        var all_zero: bool = true;
+        for (new_line.items) |d| {
+            if (d != 0) {
+                all_zero = false;
+                break;
             }
-            try all_last.append(@intCast(new_line.getLast()));
-            var all_zero: bool = true;
-            for (new_line.items) |d| {
-                if (d != 0) {
-                    all_zero = false;
-                    break;
-                }
-            }
-            if (!all_zero) {
-                new_l = try new_line.toOwnedSlice();
-                continue;
-            }
+        }
+        if (!all_zero) {
+            l = new_line.toOwnedSlice() catch unreachable;
+            continue;
+        }
+        return single.toOwnedSlice() catch unreachable;
+    }
+}
 
-            for (all_last.items) |d| {
-                res += d;
-            }
-            break;
+pub fn solve1(input: [][]i32) i32 {
+    var res: i32 = 0;
+    for (input) |i| {
+        for (solve(i, true)) |r| {
+            res += r;
         }
     }
     return res;
 }
 
-pub fn solve2(input: [][]i32) !i32 {
+pub fn solve2(input: [][]i32) i32 {
     var res: i32 = 0;
-    for (input) |l| {
-        var new_l = l;
-        var all_last = std.ArrayList(i32).init(alloc);
-        res += l[0];
-        while (true) {
-            var new_line = std.ArrayList(i32).init(alloc);
-            for (new_l[1..], 1..) |_, i| {
-                try new_line.append(@intCast(new_l[i] - new_l[i - 1]));
+    for (input) |i| {
+        for (solve(i, false), 0..) |r, j| {
+            if (j % 2 == 0) {
+                res += r;
+            } else {
+                res -= r;
             }
-            try all_last.append(@intCast(new_line.items[0]));
-            var all_zero: bool = true;
-            for (new_line.items) |d| {
-                if (d != 0) {
-                    all_zero = false;
-                    break;
-                }
-            }
-            if (!all_zero) {
-                new_l = try new_line.toOwnedSlice();
-                continue;
-            }
-
-            for (all_last.items, 0..) |d, i| {
-                if (i % 2 == 0) {
-                    res -= d;
-                } else {
-                    res += d;
-                }
-            }
-            break;
         }
     }
     return res;
@@ -90,8 +77,8 @@ pub fn parse(input: []const u8) ![][]i32 {
 pub fn main() !void {
     const input = try parse(data);
     const input2 = try parse(data);
-    std.debug.print("Part1: {}\n", .{try solve1(input)});
-    std.debug.print("Part2: {}\n", .{try solve2(input2)});
+    std.debug.print("Part1: {}\n", .{solve1(input)});
+    std.debug.print("Part2: {}\n", .{solve2(input2)});
 }
 
 const test_data =
@@ -101,11 +88,11 @@ const test_data =
 ;
 
 test "test-1" {
-    const res: i32 = try solve1(try parse(test_data));
+    const res: i32 = solve1(try parse(test_data));
     try std.testing.expectEqual(res, 114);
 }
 
 test "test-2" {
-    const res: i32 = try solve2(try parse(test_data));
+    const res: i32 = solve2(try parse(test_data));
     try std.testing.expectEqual(res, 2);
 }
