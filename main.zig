@@ -24,14 +24,7 @@ pub fn main() !void {
         day = try std.fmt.parseInt(usize, args[1], 10);
     }
 
-    const alloc = std.heap.page_allocator;
-    // const alloc = std.heap.c_allocator;
-
-    // let's not bother with the memory leaks here
-    const heap_size = 1550000;
-    // var buffer: [heap_size]u8 = undefined;
-    // var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    // const alloc = fba.allocator();
+    const alloc = std.heap.c_allocator;
 
     var total: i128 = 0;
     inline for (days, 0..) |d, i| {
@@ -45,7 +38,7 @@ pub fn main() !void {
     }
 
     if (args.len == 1) {
-        std.debug.print("Finished {any} days in {d:.5}ms with {d:.5}MB of heap\n", .{ days.len, @as(f64, @floatFromInt(total)) / 1000000.0, @as(f64, @floatFromInt(heap_size)) / 1000000.0 });
+        std.debug.print("Finished {any} days in {d:.5}ms\n", .{ days.len, @as(f64, @floatFromInt(total)) / 1000000.0 });
     }
 }
 
