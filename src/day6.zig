@@ -9,14 +9,33 @@ const Race = struct {
         return hold_for * (self.time - hold_for);
     }
 
+    // we want to solve (with x = start time) x*(self.time-x) > self.dist
+    // we got -x^2 +  x * self.time - self.dist > 0
+    // easy, x between the 2 roots of the polynom
+    // delta = self.time^2 - 4 * (-1) * (-self.dist) = self.time^2 - 4 * self.dist
+    // root1 = (-self.time - sqrt(delta)) / (2*-1) = (self.time+sqrt(delta))/2
+    // root2 = (-self.time + sqrt(delta)) / (2*-1) = (self.time-sqrt(delta))/2
     pub fn nways(self: Race) usize {
-        var res: usize = 0;
-        for (1..self.time) |i| {
-            if (self.run(i) > self.dist) {
-                res += 1;
-            }
+        const delta: f64 = @floatFromInt(self.time * self.time - 4 * self.dist);
+        if (delta < 0) {
+            return 0;
         }
-        return res;
+        if (delta == 0) {
+            return 1;
+        }
+        const root1: f64 = (@as(f64, @floatFromInt(self.time)) + std.math.sqrt(delta)) / 2.0;
+        const root2: f64 = (@as(f64, @floatFromInt(self.time)) - std.math.sqrt(delta)) / 2.0;
+        const int_root1: i64 = @intFromFloat(std.math.ceil(root1));
+        const int_root2: i64 = @intFromFloat(std.math.floor(root2));
+
+        if (root2 < root1) return @intCast(int_root1 - int_root2 - 1);
+        // var res: usize = 0;
+        // for (1..self.time) |i| {
+        //     if (self.run(i) > self.dist) {
+        //         res += 1;
+        //     }
+        // }
+        return 0;
     }
 };
 
