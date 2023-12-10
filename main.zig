@@ -89,10 +89,6 @@ const DayBench = struct {
     stddev: i128,
 };
 
-fn compare(_: void, a: i128, b: i128) bool {
-    return a < b;
-}
-
 fn bench(alloc: A, n: usize) !void {
     var res = std.mem.zeroes([days.len]DayBench);
     var totals_list = std.ArrayList(i128).init(std.heap.page_allocator);
@@ -110,7 +106,7 @@ fn bench(alloc: A, n: usize) !void {
             totals[j] += t;
         }
         const runs = try runs_list.toOwnedSlice();
-        std.sort.insertion(i128, runs, void{}, compare);
+        std.sort.insertion(i128, runs, void{}, std.sort.asc(i128));
 
         var b = DayBench{
             .min = 0,
@@ -141,7 +137,7 @@ fn bench(alloc: A, n: usize) !void {
         std.debug.print("│{d: ^8}│{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │\n", .{ i, @as(f64, @floatFromInt(b.min)) / 1000000.0, @as(f64, @floatFromInt(b.max)) / 1000000.0, @as(f64, @floatFromInt(b.mean)) / 1000000.0, @as(f64, @floatFromInt(b.median)) / 1000000.0, @as(f64, @floatFromInt(b.stddev)) / 1000000.0 });
         std.debug.print("├────────┼────────────┼────────────┼────────────┼────────────┼────────────┤\n", .{});
     }
-    std.sort.insertion(i128, totals, void{}, compare);
+    std.sort.insertion(i128, totals, void{}, std.sort.asc(i128));
     var max: i128 = 0;
     var min: i128 = 0;
     const median: i128 = totals[totals.len / 2];

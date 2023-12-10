@@ -56,7 +56,7 @@ const Game = struct {
 pub fn solve1(input: []Game) usize {
     var res: usize = 0;
     const d: []Game = input;
-    std.sort.insertion(Game, d, void{}, Game.beats);
+    std.sort.heap(Game, d, void{}, Game.beats);
     for (d, 0..) |h, i| {
         res += h.bid * (d.len - i);
     }
@@ -66,7 +66,7 @@ pub fn solve1(input: []Game) usize {
 pub fn solve2(input: []Game) usize {
     var res: usize = 0;
     const d: []Game = input;
-    std.sort.insertion(Game, d, void{}, Game.beats);
+    std.sort.heap(Game, d, void{}, Game.beats);
     for (d, 0..) |h, i| {
         res += h.bid * (d.len - i);
     }
