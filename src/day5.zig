@@ -1,6 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day5.txt");
-const alloc = std.heap.page_allocator;
+pub var alloc = std.heap.page_allocator;
 
 const Interval = struct {
     start: usize,
@@ -90,7 +89,7 @@ pub fn solve1(input: Almanac) usize {
 
 pub fn solve2(input: Almanac) !usize {
     var res: ?usize = null;
-    var known = std.AutoArrayHashMap(Interval, void).init(std.heap.page_allocator);
+    var known = std.AutoArrayHashMap(Interval, void).init(alloc);
 
     for (input.seeds, 0..) |s, i| {
         if (i % 2 == 0) {
@@ -100,10 +99,10 @@ pub fn solve2(input: Almanac) !usize {
 
     for (input.maps) |map| {
         var unknown = known;
-        known = std.AutoArrayHashMap(Interval, void).init(std.heap.page_allocator);
+        known = std.AutoArrayHashMap(Interval, void).init(alloc);
 
         for (map) |m| {
-            var new_unknown = std.AutoArrayHashMap(Interval, void).init(std.heap.page_allocator);
+            var new_unknown = std.AutoArrayHashMap(Interval, void).init(alloc);
             for ((try unknown.clone()).keys()) |i| {
                 _ = known.swapRemove(i);
                 try m.on(i, &known, &new_unknown);
@@ -128,19 +127,19 @@ pub fn solve2(input: Almanac) !usize {
 pub fn parse(input: []const u8) !Almanac {
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
-    var seeds = std.ArrayList(usize).init(std.heap.page_allocator);
+    var seeds = std.ArrayList(usize).init(alloc);
     var seeds_split = std.mem.tokenizeScalar(u8, std.mem.trim(u8, lines.next().?[6..], " "), ' ');
     while (seeds_split.next()) |seed| {
         try seeds.append(try std.fmt.parseInt(usize, seed, 10));
     }
 
-    var maps = std.ArrayList([]Map).init(std.heap.page_allocator);
-    var map = std.ArrayList(Map).init(std.heap.page_allocator);
+    var maps = std.ArrayList([]Map).init(alloc);
+    var map = std.ArrayList(Map).init(alloc);
     while (lines.next()) |line| {
         if (line[line.len - 1] == ':') {
             if (map.items.len > 0) {
                 try maps.append(try map.toOwnedSlice());
-                map = std.ArrayList(Map).init(std.heap.page_allocator);
+                map = std.ArrayList(Map).init(alloc);
             }
             continue;
         }
@@ -152,18 +151,12 @@ pub fn parse(input: []const u8) !Almanac {
         });
     }
     try maps.append(try map.toOwnedSlice());
-    map = std.ArrayList(Map).init(std.heap.page_allocator);
+    map = std.ArrayList(Map).init(alloc);
 
     return Almanac{
         .seeds = try seeds.toOwnedSlice(),
         .maps = try maps.toOwnedSlice(),
     };
-}
-
-pub fn main() !void {
-    const input = try parse(data);
-    std.debug.print("Part1: {}\n", .{solve1(input)});
-    std.debug.print("Part2: {}\n", .{try solve2(input)});
 }
 
 const test_data =

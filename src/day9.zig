@@ -1,5 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day9.txt");
+pub const data = @embedFile("day9.txt");
 const alloc = std.heap.page_allocator;
 
 pub fn solve(input: []i32, last: bool) []i32 {

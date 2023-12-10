@@ -1,5 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day4.txt");
+pub var alloc = std.heap.page_allocator;
 
 const Card = struct {
     n: u32,
@@ -48,23 +48,23 @@ pub fn solve2(input: []Card) u32 {
 }
 
 pub fn parse(input: []const u8) ![]Card {
-    var res = std.ArrayList(Card).init(std.heap.page_allocator);
+    var res = std.ArrayList(Card).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
         var split_line = std.mem.tokenizeScalar(u8, line, ':');
-        var n: u32 = try std.fmt.parseInt(u32, std.mem.trim(u8, split_line.next().?[5..], " "), 10);
+        const n: u32 = try std.fmt.parseInt(u32, std.mem.trim(u8, split_line.next().?[5..], " "), 10);
         var numbers = std.mem.tokenizeScalar(u8, split_line.next().?, '|');
 
         var winning = std.mem.tokenizeScalar(u8, std.mem.trim(u8, numbers.next().?, " "), ' ');
         var my_numbers = std.mem.tokenizeScalar(u8, std.mem.trim(u8, numbers.next().?, " "), ' ');
 
-        var winnig_list = std.AutoHashMap(u32, void).init(std.heap.page_allocator);
+        var winnig_list = std.AutoHashMap(u32, void).init(alloc);
         while (winning.next()) |w| {
             try winnig_list.put(try std.fmt.parseInt(u32, w, 10), void{});
         }
 
-        var my_numbers_list = std.ArrayList(u32).init(std.heap.page_allocator);
+        var my_numbers_list = std.ArrayList(u32).init(alloc);
         while (my_numbers.next()) |mn| {
             try my_numbers_list.append(try std.fmt.parseInt(u32, mn, 10));
         }
@@ -79,12 +79,6 @@ pub fn parse(input: []const u8) ![]Card {
     return res.toOwnedSlice();
 }
 
-pub fn main() !void {
-    var da = try parse(data);
-    std.debug.print("Part1: {}\n", .{solve1(da)});
-    std.debug.print("Part2: {}\n", .{solve2(da)});
-}
-
 const test_data =
     \\Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
     \\Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
@@ -95,11 +89,11 @@ const test_data =
 ;
 
 test "test-1" {
-    const sum: u32 = solve1(try parse(test_data));
-    try std.testing.expectEqual(sum, 13);
+    const res: u32 = solve1(try parse(test_data));
+    try std.testing.expectEqual(res, 13);
 }
 
 test "test-2" {
-    const sum: u32 = solve2(try parse(test_data));
-    try std.testing.expectEqual(sum, 30);
+    const res: u32 = solve2(try parse(test_data));
+    try std.testing.expectEqual(res, 30);
 }

@@ -1,6 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day6.txt");
-const alloc = std.heap.page_allocator;
+pub var alloc = std.heap.page_allocator;
 
 const Race = struct {
     time: usize,
@@ -76,13 +75,6 @@ pub fn parse(input: []const u8) ![]Race {
     }
 
     return res.toOwnedSlice();
-}
-
-pub fn main() !void {
-    const input = try parse(data);
-    const input2 = try parse2(data);
-    std.debug.print("Part1: {}\n", .{solve1(input)});
-    std.debug.print("Part2: {}\n", .{solve2(input2)});
 }
 
 const test_data =

@@ -1,5 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day3.txt");
+pub var alloc = std.heap.page_allocator;
 
 const CellEnum = enum {
     symbol,
@@ -27,7 +27,7 @@ pub fn has_symbols_around(input: [][]Cell, i: usize, j: usize) bool {
     return false;
 }
 
-pub fn get_gear_ration(input: [][]Cell, i: usize, j: usize) u32 {
+pub fn get_gear_ratio(input: [][]Cell, i: usize, j: usize) u32 {
     var found: u32 = 0;
     var ratio: u32 = 1;
     var current_n: *u32 = &found;
@@ -36,7 +36,7 @@ pub fn get_gear_ration(input: [][]Cell, i: usize, j: usize) u32 {
             if (i + ix < 1 or i + ix > input.len or j + jx < 1 or j + jx > input[0].len) {
                 continue;
             }
-            var c: Cell = input[i + ix - 1][j + jx - 1];
+            const c: Cell = input[i + ix - 1][j + jx - 1];
             if (c == CellEnum.number and current_n != c.number) {
                 found += 1;
                 ratio *= c.number.*;
@@ -73,7 +73,7 @@ pub fn solve2(input: [][]Cell) u32 {
             switch (c) {
                 CellEnum.number, CellEnum.empty => {},
                 CellEnum.symbol => |s| if (s == '*') {
-                    var ratio: u32 = get_gear_ration(input, i, j);
+                    const ratio: u32 = get_gear_ratio(input, i, j);
                     if (ratio != 0) {
                         res += ratio;
                     }
@@ -85,17 +85,17 @@ pub fn solve2(input: [][]Cell) u32 {
 }
 
 pub fn parse(input: []const u8) ![][]Cell {
-    var res = std.ArrayList([]Cell).init(std.heap.page_allocator);
+    var res = std.ArrayList([]Cell).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        var cell_line = std.ArrayList(Cell).init(std.heap.page_allocator);
+        var cell_line = std.ArrayList(Cell).init(alloc);
         for (line, 0..) |c, i| {
             var cell = Cell{ .empty = void{} };
             if (c >= '0' and c <= '9') {
-                var value: u32 = c - '0';
+                const value: u32 = c - '0';
                 if (i == 0 or cell_line.getLast() != CellEnum.number) {
-                    var n: *u32 = try std.heap.page_allocator.create(u32);
+                    const n: *u32 = try alloc.create(u32);
                     n.* = value;
                     cell = Cell{ .number = n };
                 } else {
@@ -113,12 +113,6 @@ pub fn parse(input: []const u8) ![][]Cell {
     return res.toOwnedSlice();
 }
 
-pub fn main() !void {
-    var da = try parse(data);
-    std.debug.print("Part1: {}\n", .{solve1(da)});
-    std.debug.print("Part2: {}\n", .{solve2(da)});
-}
-
 const test_data =
     \\467..114..
     \\...*......
@@ -133,11 +127,11 @@ const test_data =
 ;
 
 test "test-1" {
-    const sum: u32 = solve1(try parse(test_data));
-    try std.testing.expectEqual(sum, 4361);
+    const res: u32 = solve1(try parse(test_data));
+    try std.testing.expectEqual(res, 4361);
 }
 
 test "test-2" {
-    const sum: u32 = solve2(try parse(test_data));
-    try std.testing.expectEqual(sum, 467835);
+    const res: u32 = solve2(try parse(test_data));
+    try std.testing.expectEqual(res, 467835);
 }

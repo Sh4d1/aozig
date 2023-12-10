@@ -1,5 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day10.txt");
+pub const data = @embedFile("day10.txt");
 const alloc = std.heap.page_allocator;
 
 const Dir = enum {

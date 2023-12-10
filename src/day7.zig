@@ -1,6 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day7.txt");
-const alloc = std.heap.page_allocator;
+pub var alloc = std.heap.page_allocator;
 
 const Game = struct {
     bid: usize,
@@ -74,7 +73,14 @@ pub fn solve2(input: []Game) usize {
     return res;
 }
 
-pub fn parse(input: []const u8, p2: bool) ![]Game {
+pub fn parse(input: []const u8) ![]Game {
+    return parse_all(input, false);
+}
+pub fn parse2(input: []const u8) ![]Game {
+    return parse_all(input, true);
+}
+
+pub fn parse_all(input: []const u8, p2: bool) ![]Game {
     var res = std.ArrayList(Game).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
@@ -113,13 +119,6 @@ pub fn parse(input: []const u8, p2: bool) ![]Game {
     return res.toOwnedSlice();
 }
 
-pub fn main() !void {
-    const input = try parse(data, false);
-    const input2 = try parse(data, true);
-    std.debug.print("Part1: {}\n", .{solve1(input)});
-    std.debug.print("Part2: {}\n", .{solve2(input2)});
-}
-
 const test_data =
     \\32T3K 765
     \\T55J5 684
@@ -129,11 +128,11 @@ const test_data =
 ;
 
 test "test-1" {
-    const res: usize = solve1(try parse(test_data, false));
+    const res: usize = solve1(try parse(test_data));
     try std.testing.expectEqual(res, 6440);
 }
 
 test "test-2" {
-    const res: usize = solve2(try parse(test_data, true));
+    const res: usize = solve2(try parse2(test_data));
     try std.testing.expectEqual(res, 5905);
 }

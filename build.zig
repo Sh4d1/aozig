@@ -1,7 +1,7 @@
 const std = @import("std");
 
-pub fn get_input(b: *std.Build, year: u32, day: u32) !void {
-    var allocator = std.heap.page_allocator;
+pub fn get_input(b: *std.Build, year: usize, day: usize) !void {
+    const allocator = std.heap.page_allocator;
     var client = std.http.Client{
         .allocator = allocator,
     };
@@ -17,12 +17,16 @@ pub fn get_input(b: *std.Build, year: u32, day: u32) !void {
 
     try headers.append("cookie", b.fmt("session={s}", .{token}));
 
-    var resp = try client.fetch(allocator, .{ .method = .GET, .headers = headers, .location = .{ .uri = uri } });
+    const resp = try client.fetch(allocator, .{ .method = .GET, .headers = headers, .location = .{ .uri = uri } });
 
     try std.fs.cwd().writeFile(b.fmt("src/day{}.txt", .{day}), resp.body.?);
 }
 
-pub fn build_day(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode, day: u32) !void {
+pub fn test_day(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode, day: usize, step: *std.build.Step) !void {
+    if (day == 0) {
+        return;
+    }
+    const utils_module = b.createModule(.{ .source_file = .{ .path = "utils/utils.zig" } });
     const path = b.fmt("src/day{}.zig", .{day});
     std.fs.Dir.access(std.fs.cwd(), path, std.fs.File.OpenFlags{}) catch {
         return;
@@ -32,35 +36,55 @@ pub fn build_day(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         try get_input(b, 2023, day);
     };
 
-    const run_step = b.step(b.fmt("run{}", .{day}), "Run day");
-
     const unit_tests = b.addTest(.{
         .root_source_file = .{ .path = path },
         .target = target,
         .optimize = optimize,
     });
+    unit_tests.addModule("utils", utils_module);
     const run_unit_tests = b.addRunArtifact(unit_tests);
     run_unit_tests.step.dependOn(b.getInstallStep());
-    run_step.dependOn(&run_unit_tests.step);
-
-    const exe = b.addExecutable(.{
-        .name = b.fmt("day{}", .{day}),
-        .root_source_file = .{ .path = path },
-        .target = target,
-        .optimize = optimize,
-    });
-    b.installArtifact(exe);
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(&run_unit_tests.step);
-    run_step.dependOn(&run_cmd.step);
+    step.dependOn(&run_unit_tests.step);
 }
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    var i: u32 = 1;
-    while (i <= 25) : (i += 1) {
-        build_day(b, target, optimize, i) catch {};
+    const utils_module = b.createModule(.{ .source_file = .{ .path = "utils/utils.zig" } });
+
+    const exe = b.addExecutable(.{
+        .name = "main",
+        .root_source_file = .{ .path = "main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibC();
+
+    for (1..25) |i| {
+        std.fs.Dir.access(std.fs.cwd(), b.fmt("src/day{}.zig", .{i}), .{}) catch {
+            continue;
+        };
+        std.fs.Dir.access(std.fs.cwd(), b.fmt("src/day{}.txt", .{i}), .{}) catch {
+            try get_input(b, 2023, @intCast(i));
+        };
+        exe.addModule(b.fmt("day{}", .{i}), b.createModule(.{ .dependencies = &[_]std.build.ModuleDependency{.{ .name = "utils", .module = utils_module }}, .source_file = .{ .path = b.fmt("src/day{}.zig", .{i}) } }));
     }
+
+    const run_step = b.step("run", "Run");
+    b.installArtifact(exe);
+    const run_cmd = b.addRunArtifact(exe);
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
+    if (b.args) |args| {
+        const d = std.fmt.parseInt(usize, args[0], 10) catch 0;
+        test_day(b, target, optimize, d, &run_cmd.step) catch {};
+    } else {
+        for (1..25) |i| {
+            test_day(b, target, optimize, i, &run_cmd.step) catch {};
+        }
+    }
+    run_step.dependOn(&run_cmd.step);
 }

@@ -1,5 +1,5 @@
 const std = @import("std");
-const data = @embedFile("day2.txt");
+pub var alloc = std.heap.page_allocator;
 
 const Try = struct {
     blue: u32,
@@ -50,32 +50,28 @@ pub fn solve2(input: []Game) u32 {
 }
 
 pub fn parse(input: []const u8) ![]Game {
-    var res = std.ArrayList(Game).init(std.heap.page_allocator);
+    var res = std.ArrayList(Game).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        var g = Game{
-            .id = undefined,
-            .tries = undefined,
-        };
+        var tries_res = std.ArrayList(Try).init(alloc);
 
         var split = std.mem.tokenizeScalar(u8, line, ':');
-        g.id = try std.fmt.parseInt(u32, split.next().?[5..], 10);
-        var tries_res = std.ArrayList(Try).init(std.heap.page_allocator);
-
+        const id = try std.fmt.parseInt(u32, split.next().?[5..], 10);
         var tries = std.mem.tokenizeScalar(u8, split.next().?, ';');
         while (tries.next()) |t| {
-            var cubes = std.mem.tokenizeScalar(u8, t, ',');
-            var try_res = Try{
+            var try_res: Try = .{
                 .green = 0,
                 .blue = 0,
                 .red = 0,
             };
+
+            var cubes = std.mem.tokenizeScalar(u8, t, ',');
             while (cubes.next()) |cube| {
-                var trim_cube = std.mem.trim(u8, cube, " ");
+                const trim_cube = std.mem.trim(u8, cube, " ");
                 var split_cube = std.mem.tokenizeScalar(u8, trim_cube, ' ');
-                var n = try std.fmt.parseInt(u32, split_cube.next().?, 10);
-                var color = split_cube.next().?;
+                const n = try std.fmt.parseInt(u32, split_cube.next().?, 10);
+                const color = split_cube.next().?;
                 if (std.mem.eql(u8, color, "blue")) {
                     try_res.blue = n;
                 }
@@ -89,16 +85,12 @@ pub fn parse(input: []const u8) ![]Game {
             try tries_res.append(try_res);
         }
 
-        g.tries = try tries_res.toOwnedSlice();
-        try res.append(g);
+        try res.append(Game{
+            .id = id,
+            .tries = try tries_res.toOwnedSlice(),
+        });
     }
     return res.toOwnedSlice();
-}
-
-pub fn main() !void {
-    var da = try parse(data);
-    std.debug.print("Part1: {}\n", .{solve1(da)});
-    std.debug.print("Part2: {}\n", .{solve2(da)});
 }
 
 const test_data =
@@ -110,11 +102,11 @@ const test_data =
 ;
 
 test "test-1" {
-    const sum: u32 = solve1(try parse(test_data));
-    try std.testing.expectEqual(sum, 8);
+    const res: u32 = solve1(try parse(test_data));
+    try std.testing.expectEqual(res, 8);
 }
 
 test "test-2" {
-    const sum: u32 = solve2(try parse(test_data));
-    try std.testing.expectEqual(sum, 2286);
+    const res: u32 = solve2(try parse(test_data));
+    try std.testing.expectEqual(res, 2286);
 }
