@@ -1,6 +1,5 @@
 const std = @import("std");
-pub const data = @embedFile("day9.txt");
-const alloc = std.heap.page_allocator;
+pub var alloc = std.heap.page_allocator;
 
 pub fn solve(input: []i32, last: bool) []i32 {
     var l = input;
@@ -72,13 +71,6 @@ pub fn parse(input: []const u8) ![][]i32 {
         try res.append(try line.toOwnedSlice());
     }
     return try res.toOwnedSlice();
-}
-
-pub fn main() !void {
-    const input = try parse(data);
-    const input2 = try parse(data);
-    std.debug.print("Part1: {}\n", .{solve1(input)});
-    std.debug.print("Part2: {}\n", .{solve2(input2)});
 }
 
 const test_data =
