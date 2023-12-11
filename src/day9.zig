@@ -1,23 +1,23 @@
 const std = @import("std");
 pub var alloc = std.heap.page_allocator;
 
-pub fn solve(input: []i32, last: bool) []i32 {
+pub fn solve(input: []i32, last: bool) ![]i32 {
     var l = input;
     var single = std.ArrayList(i32).init(alloc);
     if (last) {
-        single.append(@intCast(input[input.len - 1])) catch unreachable;
+        try single.append(@intCast(input[input.len - 1]));
     } else {
-        single.append(@intCast(input[0])) catch unreachable;
+        try single.append(@intCast(input[0]));
     }
     while (true) {
         var new_line = std.ArrayList(i32).init(alloc);
         for (l[1..], 1..) |_, i| {
-            new_line.append(@intCast(l[i] - l[i - 1])) catch unreachable;
+            try new_line.append(@intCast(l[i] - l[i - 1]));
         }
         if (last) {
-            single.append(@intCast(new_line.getLast())) catch unreachable;
+            try single.append(@intCast(new_line.getLast()));
         } else {
-            single.append(@intCast(new_line.items[0])) catch unreachable;
+            try single.append(@intCast(new_line.items[0]));
         }
         var all_zero: bool = true;
         for (new_line.items) |d| {
@@ -27,27 +27,27 @@ pub fn solve(input: []i32, last: bool) []i32 {
             }
         }
         if (!all_zero) {
-            l = new_line.toOwnedSlice() catch unreachable;
+            l = try new_line.toOwnedSlice();
             continue;
         }
-        return single.toOwnedSlice() catch unreachable;
+        return try single.toOwnedSlice();
     }
 }
 
-pub fn solve1(input: [][]i32) i32 {
+pub fn solve1(input: [][]i32) !i32 {
     var res: i32 = 0;
     for (input) |i| {
-        for (solve(i, true)) |r| {
+        for (try solve(i, true)) |r| {
             res += r;
         }
     }
     return res;
 }
 
-pub fn solve2(input: [][]i32) i32 {
+pub fn solve2(input: [][]i32) !i32 {
     var res: i32 = 0;
     for (input) |i| {
-        for (solve(i, false), 0..) |r, j| {
+        for (try solve(i, false), 0..) |r, j| {
             if (j % 2 == 0) {
                 res += r;
             } else {
