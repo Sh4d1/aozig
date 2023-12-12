@@ -4,39 +4,32 @@ pub var alloc = std.heap.page_allocator;
 const MemKey = struct {
     usize,
     usize,
-    usize,
 };
 
 const Row = struct {
     patterns: []const u8,
     list: []usize,
 
-    pub fn solve(self: Row, mem: *std.AutoArrayHashMap(MemKey, usize), pattern_index: usize, list_index: usize, repetition: usize) !usize {
-        const mem_key: MemKey = .{ pattern_index, list_index, repetition };
+    pub fn solve(self: Row, mem: *std.AutoArrayHashMap(MemKey, usize), pattern_index: usize, list_index: usize) !usize {
+        const mem_key: MemKey = .{ pattern_index, list_index };
         if (mem.get(mem_key)) |v| return v;
-
-        // the end
-        if (self.patterns.len == pattern_index) {
-            // we have a way o/
-            if (repetition == 0 and self.list.len == list_index) return 1;
-            if (self.list.len == list_index + 1 and self.list[list_index] == repetition) return 1;
-            // we don't have a way :(
-            return 0;
-        }
+        if (pattern_index >= self.patterns.len) return if (list_index == self.list.len) 1 else 0;
 
         var res: usize = 0;
         const current_pattern = self.patterns[pattern_index];
 
-        if (current_pattern == '.' or current_pattern == '?') {
-            // let's try the next one
-            if (repetition == 0) res += try self.solve(mem, pattern_index + 1, list_index, 0);
-            // it's a match, we can solve the next pattern
-            if (repetition != 0 and list_index < self.list.len and self.list[list_index] == repetition) res += try self.solve(mem, pattern_index + 1, list_index + 1, 0);
-        }
+        if (current_pattern == '.' or current_pattern == '?') res += try self.solve(mem, pattern_index + 1, list_index);
 
         if (current_pattern == '#' or current_pattern == '?') {
-            // le'ts continue the repetition
-            res += try self.solve(mem, pattern_index + 1, list_index, repetition + 1);
+            if (list_index < self.list.len) {
+                if (pattern_index + self.list[list_index] <= self.patterns.len) {
+                    if (std.mem.count(u8, self.patterns[pattern_index .. pattern_index + self.list[list_index]], ".") == 0) {
+                        if (pattern_index + self.list[list_index] == self.patterns.len or self.patterns[pattern_index + self.list[list_index]] != '#') {
+                            res += try self.solve(mem, pattern_index + self.list[list_index] + 1, list_index + 1);
+                        }
+                    }
+                }
+            }
         }
 
         // happy cpu
@@ -50,7 +43,7 @@ pub fn solve1(input: []Row) !usize {
     for (input) |r| {
         var mem = std.AutoArrayHashMap(MemKey, usize).init(alloc);
         defer mem.deinit();
-        res += try r.solve(&mem, 0, 0, 0);
+        res += try r.solve(&mem, 0, 0);
     }
     return res;
 }
@@ -59,7 +52,7 @@ pub fn solve2(input: []Row) !usize {
     for (input) |r| {
         var mem = std.AutoArrayHashMap(MemKey, usize).init(alloc);
         defer mem.deinit();
-        res += try r.solve(&mem, 0, 0, 0);
+        res += try r.solve(&mem, 0, 0);
     }
     return res;
 }
