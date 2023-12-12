@@ -24,12 +24,12 @@ const Row = struct {
         if (current_pattern == '.' or current_pattern == '?') res += try self.solve(mem, pattern_index + 1, list_index);
 
         if (current_pattern == '#' or current_pattern == '?') {
-            if (list_index < self.list.len) {
-                if (pattern_index + self.list[list_index] <= self.patterns.len) {
-                    if (std.mem.count(u8, self.patterns[pattern_index .. pattern_index + self.list[list_index]], ".") == 0) {
-                        if (pattern_index + self.list[list_index] == self.patterns.len or self.patterns[pattern_index + self.list[list_index]] != '#') {
-                            res += try self.solve(mem, pattern_index + self.list[list_index] + 1, list_index + 1);
-                        }
+            if (list_index < self.list.len and pattern_index + self.list[list_index] <= self.patterns.len) {
+                if (for (pattern_index..pattern_index + self.list[list_index]) |i| {
+                    if (self.patterns[i] == '.') break false;
+                } else true) {
+                    if (pattern_index + self.list[list_index] == self.patterns.len or self.patterns[pattern_index + self.list[list_index]] != '#') {
+                        res += try self.solve(mem, pattern_index + self.list[list_index] + 1, list_index + 1);
                     }
                 }
             }
