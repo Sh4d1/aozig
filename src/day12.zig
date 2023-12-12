@@ -1,19 +1,22 @@
 const std = @import("std");
 pub var alloc = std.heap.page_allocator;
 
-const MemKey = struct {
-    usize,
-    usize,
-};
-
 const Row = struct {
     patterns: []const u8,
     list: []usize,
 
-    pub fn solve(self: Row, mem: *std.AutoArrayHashMap(MemKey, usize), pattern_index: usize, list_index: usize) !usize {
-        const mem_key: MemKey = .{ pattern_index, list_index };
-        if (mem.get(mem_key)) |v| return v;
-        if (pattern_index >= self.patterns.len) return if (list_index == self.list.len) 1 else 0;
+    pub fn init(self: Row) ![]?usize {
+        const size = self.patterns.len * (self.list.len + 1);
+        var mem = try alloc.alloc(?usize, size);
+        for (0..size) |i| mem[i] = null;
+        return mem;
+    }
+
+    pub fn solve(self: Row, mem: *[]?usize, pattern_index: usize, list_index: usize) !usize {
+        if (pattern_index >= self.patterns.len) return @intFromBool(list_index == self.list.len);
+
+        const mem_key: usize = pattern_index * (self.list.len + 1) + list_index;
+        if (mem.*[mem_key]) |v| return v;
 
         var res: usize = 0;
         const current_pattern = self.patterns[pattern_index];
@@ -32,8 +35,7 @@ const Row = struct {
             }
         }
 
-        // happy cpu
-        try mem.put(mem_key, res);
+        mem.*[mem_key] = res;
         return res;
     }
 };
@@ -41,18 +43,16 @@ const Row = struct {
 pub fn solve1(input: []Row) !usize {
     var res: usize = 0;
     for (input) |r| {
-        var mem = std.AutoArrayHashMap(MemKey, usize).init(alloc);
-        defer mem.deinit();
-        res += try r.solve(&mem, 0, 0);
+        var m = try r.init();
+        res += try r.solve(&m, 0, 0);
     }
     return res;
 }
 pub fn solve2(input: []Row) !usize {
     var res: usize = 0;
     for (input) |r| {
-        var mem = std.AutoArrayHashMap(MemKey, usize).init(alloc);
-        defer mem.deinit();
-        res += try r.solve(&mem, 0, 0);
+        var m = try r.init();
+        res += try r.solve(&m, 0, 0);
     }
     return res;
 }
@@ -63,12 +63,19 @@ pub fn parse(input: []const u8) ![]Row {
 
     while (lines.next()) |line| {
         var list = std.ArrayList(usize).init(alloc);
+        var pa = std.ArrayList(u8).init(alloc);
         var split = std.mem.tokenizeScalar(u8, line, ' ');
+        var lc: ?u8 = null;
         const pattern = split.next().?;
+        for (pattern) |c| {
+            if (lc != null and lc == '.' and c == '.') continue;
+            lc = c;
+            try pa.append(c);
+        }
         var list_split = std.mem.tokenizeScalar(u8, split.next().?, ',');
         while (list_split.next()) |p| try list.append(try std.fmt.parseInt(usize, p, 10));
         try res.append(Row{
-            .patterns = pattern,
+            .patterns = try pa.toOwnedSlice(),
             .list = try list.toOwnedSlice(),
         });
     }
@@ -82,15 +89,24 @@ pub fn parse2(input: []const u8) ![]Row {
     while (lines.next()) |line| {
         var patterns = std.ArrayList(u8).init(alloc);
         var list = std.ArrayList(usize).init(alloc);
+        var pa = std.ArrayList(u8).init(alloc);
         var final_list = std.ArrayList(usize).init(alloc);
 
         var split = std.mem.tokenizeScalar(u8, line, ' ');
-        const pattern = split.next().?;
+        const i_pattern = split.next().?;
         var list_split = std.mem.tokenizeScalar(u8, split.next().?, ',');
         while (list_split.next()) |p| try list.append(try std.fmt.parseInt(usize, p, 10));
+        var lc: ?u8 = null;
+        for (i_pattern) |c| {
+            if (lc != null and lc == '.' and c == '.') continue;
+            lc = c;
+            try pa.append(c);
+        }
+        const pattern = try pa.toOwnedSlice();
+
         const initial_line = try list.toOwnedSlice();
         for (0..5) |i| {
-            for (pattern) |p| try patterns.append(p);
+            try patterns.appendSlice(pattern);
             try final_list.appendSlice(initial_line);
             if (i != 4) try patterns.append('?');
         }
