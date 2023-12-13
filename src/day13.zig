@@ -33,21 +33,17 @@ pub fn isReflection(grid: [][]const u8, vertical: bool, i: usize) bool {
 
 pub fn solve1(input: [][][]const u8) !usize {
     var res: usize = 0;
-    for (input) |grid| {
-        var found: bool = false;
+    outer: for (input) |grid| {
         for (0..grid.len) |i| {
             if (isReflection(grid, false, i)) {
                 res += 100 * (i + 1);
-                found = true;
-                break;
+                continue :outer;
             }
         }
-        if (!found) {
-            for (0..grid[0].len) |i| {
-                if (isReflection(grid, true, i)) {
-                    res += i + 1;
-                    break;
-                }
+        for (0..grid[0].len) |i| {
+            if (isReflection(grid, true, i)) {
+                res += i + 1;
+                break;
             }
         }
     }
@@ -56,7 +52,7 @@ pub fn solve1(input: [][][]const u8) !usize {
 
 pub fn solve2(input: [][][]const u8) !usize {
     var res: usize = 0;
-    for (input) |grid| {
+    outer: for (input) |grid| {
         var m = try alloc.alloc([]u8, grid.len);
         for (grid, 0..) |line, i| {
             m[i] = try alloc.alloc(u8, grid[0].len);
@@ -68,34 +64,25 @@ pub fn solve2(input: [][][]const u8) !usize {
             const old = m[x][y];
             if (old == '.') m[x][y] = '#';
             if (old == '#') m[x][y] = '.';
-            var found: bool = false;
             for (0..grid.len) |i| {
                 if (isReflection(m, false, i) and !isReflection(grid, false, i)) {
                     res += 100 * (i + 1);
-                    found = true;
-                    break;
+                    continue :outer;
                 }
             }
-            if (!found) {
-                for (0..grid[0].len) |i| {
-                    if (isReflection(m, true, i) and !isReflection(grid, true, i)) {
-                        res += i + 1;
-                        found = true;
-                        break;
-                    }
+            for (0..grid[0].len) |i| {
+                if (isReflection(m, true, i) and !isReflection(grid, true, i)) {
+                    res += i + 1;
+                    continue :outer;
                 }
             }
-            if (!found) {
-                m[x][y] = old;
-                if (y < grid[0].len) y += 1;
-                if (y == grid[0].len) {
-                    y = 0;
-                    x = x + 1;
-                }
-                if (x == grid.len) unreachable;
-            } else {
-                break;
+            m[x][y] = old;
+            if (y < grid[0].len) y += 1;
+            if (y == grid[0].len) {
+                y = 0;
+                x = x + 1;
             }
+            if (x == grid.len) unreachable;
         }
     }
     return res;
