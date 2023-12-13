@@ -34,7 +34,7 @@ const Game = struct {
         };
     }
 
-    pub fn beats(_: void, self: Game, other: Game) bool {
+    pub fn beats(self: Game, other: Game) bool {
         if (self.score() > other.score()) {
             return true;
         } else if (self.score() < other.score()) {
@@ -53,20 +53,49 @@ const Game = struct {
     }
 };
 
-pub fn solve1(input: []Game) usize {
+pub fn sort(a: []Game, b: []Game) void {
+    for (0..a.len) |i| b[i] = a[i];
+    split_merge(b, 0, a.len, a);
+}
+
+fn split_merge(b: []Game, begin: usize, end: usize, a: []Game) void {
+    if (end <= 1 + begin) return;
+    const middle = (end + begin) / 2;
+    split_merge(a, begin, middle, b);
+    split_merge(a, middle, end, b);
+    merge(b, begin, middle, end, a);
+}
+
+fn merge(a: []Game, begin: usize, middle: usize, end: usize, b: []Game) void {
+    var i = begin;
+    var j = middle;
+    for (begin..end) |k| {
+        if (i < middle and (j >= end or a[i].beats(a[j]))) {
+            b[k] = a[i];
+            i = i + 1;
+        } else {
+            b[k] = a[j];
+            j = j + 1;
+        }
+    }
+}
+
+pub fn solve1(input: []Game) !usize {
     var res: usize = 0;
     const d: []Game = input;
-    std.sort.heap(Game, d, void{}, Game.beats);
+    const r = try alloc.alloc(Game, input.len);
+    sort(d, r);
     for (d, 0..) |h, i| {
         res += h.bid * (d.len - i);
     }
     return res;
 }
 
-pub fn solve2(input: []Game) usize {
+pub fn solve2(input: []Game) !usize {
     var res: usize = 0;
     const d: []Game = input;
-    std.sort.heap(Game, d, void{}, Game.beats);
+    const r = try alloc.alloc(Game, input.len);
+    sort(d, r);
     for (d, 0..) |h, i| {
         res += h.bid * (d.len - i);
     }
@@ -128,11 +157,11 @@ const test_data =
 ;
 
 test "test-1" {
-    const res: usize = solve1(try parse(test_data));
+    const res: usize = try solve1(try parse(test_data));
     try std.testing.expectEqual(res, 6440);
 }
 
 test "test-2" {
-    const res: usize = solve2(try parse2(test_data));
+    const res: usize = try solve2(try parse2(test_data));
     try std.testing.expectEqual(res, 5905);
 }
