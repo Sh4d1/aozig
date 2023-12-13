@@ -60,18 +60,27 @@ pub fn solve2(input: [][][]const u8) !usize {
         }
         var x: usize = 0;
         var y: usize = 0;
+        var mem_hori = try alloc.alloc(?bool, grid.len);
+        var mem_vert = try alloc.alloc(?bool, grid[0].len);
+        for (0..grid.len) |i| mem_hori[i] = null;
+        for (0..grid[0].len) |i| mem_vert[i] = null;
+
         while (true) {
             const old = m[x][y];
             if (old == '.') m[x][y] = '#';
             if (old == '#') m[x][y] = '.';
             for (0..grid.len) |i| {
-                if (isReflection(m, false, i) and !isReflection(grid, false, i)) {
+                if (mem_hori[i] == null) mem_hori[i] = isReflection(grid, false, i);
+                if (mem_hori[i].?) continue;
+                if (isReflection(m, false, i)) {
                     res += 100 * (i + 1);
                     continue :outer;
                 }
             }
             for (0..grid[0].len) |i| {
-                if (isReflection(m, true, i) and !isReflection(grid, true, i)) {
+                if (mem_vert[i] == null) mem_vert[i] = isReflection(grid, true, i);
+                if (mem_vert[i].?) continue;
+                if (isReflection(m, true, i)) {
                     res += i + 1;
                     continue :outer;
                 }
