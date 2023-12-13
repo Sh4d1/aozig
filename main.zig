@@ -2,7 +2,21 @@ const std = @import("std");
 const time = std.time;
 const A = std.mem.Allocator;
 
-const days = [_]type{ @import("day1"), @import("day2"), @import("day3"), @import("day4"), @import("day5"), @import("day6"), @import("day7"), @import("day8"), @import("day9"), @import("day10"), @import("day11"), @import("day12") };
+const days = [_]type{
+    @import("day1"),
+    @import("day2"),
+    @import("day3"),
+    @import("day4"),
+    @import("day5"),
+    @import("day6"),
+    @import("day7"),
+    @import("day8"),
+    @import("day9"),
+    @import("day10"),
+    @import("day11"),
+    @import("day12"),
+    @import("day13"),
+};
 
 pub fn main() !void {
     const args = try std.process.argsAlloc(std.heap.page_allocator);
