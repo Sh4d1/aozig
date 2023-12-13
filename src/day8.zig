@@ -14,7 +14,7 @@ const Node = struct {
 
 const Game = struct {
     inst: []Dir,
-    nodes: std.StringHashMap(Node),
+    nodes: []?Node,
 
     pub fn solve(self: Game, start: []const u8, end: []const u8) usize {
         var i: usize = 0;
@@ -22,8 +22,8 @@ const Game = struct {
 
         while (true) {
             switch (self.inst[i % self.inst.len]) {
-                Dir.Left => current = self.nodes.get(current).?.left,
-                Dir.Right => current = self.nodes.get(current).?.right,
+                Dir.Left => current = self.nodes[getKey(current)].?.left,
+                Dir.Right => current = self.nodes[getKey(current)].?.right,
             }
 
             i += 1;
@@ -40,15 +40,22 @@ pub fn solve1(input: Game) usize {
 }
 
 pub fn solve2(input: Game) usize {
-    var iter = input.nodes.keyIterator();
     var res: usize = 1;
 
-    while (iter.next()) |k| {
-        if (k.*[2] == 'A') {
-            const tmp = input.solve(k.*, "Z");
-            res = res * tmp / std.math.gcd(res, tmp);
+    for (input.nodes) |k| {
+        if (k) |kk| {
+            if (kk.cur[2] == 'A') {
+                const tmp = input.solve(kk.cur, "Z");
+                res = res * tmp / std.math.gcd(res, tmp);
+            }
         }
     }
+    return res;
+}
+
+fn getKey(n: []const u8) usize {
+    var res: usize = 0;
+    for (n) |c| res += 25 * res + c - 'A';
     return res;
 }
 
@@ -66,17 +73,19 @@ pub fn parse(input: []const u8) !Game {
         }
     }
 
-    var nodes = std.StringHashMap(Node).init(alloc);
+    var nodes = try alloc.alloc(?Node, 26 * 26 * 26);
+    for (0..26 * 26 * 26) |i| nodes[i] = null;
+
     while (lines.next()) |l| {
         var split = std.mem.tokenizeScalar(u8, l, '=');
         const cur = std.mem.trim(u8, split.next().?, " ");
         var right = std.mem.tokenizeScalar(u8, std.mem.trim(u8, split.next().?, " ()"), ',');
 
-        try nodes.put(cur, Node{
+        nodes[getKey(cur)] = Node{
             .cur = cur,
             .left = right.next().?,
             .right = std.mem.trim(u8, right.next().?, " "),
-        });
+        };
     }
 
     return Game{
