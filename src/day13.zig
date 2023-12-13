@@ -1,98 +1,45 @@
 const std = @import("std");
 pub var alloc = std.heap.page_allocator;
 
-pub fn isReflection(grid: [][]const u8, vertical: bool, i: usize) bool {
-    if (!vertical) {
-        var eql: bool = false;
-        for (0..grid.len) |j| {
-            if (i + j + 1 >= grid.len) break;
-            if (i < j) break;
-            if (std.mem.eql(u8, grid[i - j], grid[i + j + 1])) {
-                eql = true;
-                continue;
-            }
-            return false;
-        }
-        return eql;
-    }
+pub fn findReflection(grid: [][]const u8, vertical: bool, mistakes: usize) usize {
+    const x_len = if (!vertical) grid.len else grid[0].len;
+    const y_len = if (!vertical) grid[0].len else grid.len;
 
-    var eql: bool = false;
-    for (0..grid[0].len) |j| {
-        if (i + j + 1 >= grid[0].len) break;
-        if (i < j) break;
-
-        for (0..grid.len) |k| {
-            if (grid[k][i - j] != grid[k][i + j + 1]) {
-                return false;
+    outer: for (1..x_len) |i| {
+        var found_mistakes: usize = 0;
+        for (0..x_len) |j| {
+            if (j + i >= x_len or i < j + 1) break;
+            for (0..y_len) |k| {
+                const l = if (!vertical) grid[j + i][k] else grid[k][j + i];
+                const r = if (!vertical) grid[i - j - 1][k] else grid[k][i - j - 1];
+                if (l != r) {
+                    found_mistakes += 1;
+                    if (found_mistakes > mistakes) continue :outer;
+                }
             }
-            eql = true;
         }
+        if (found_mistakes != mistakes) continue;
+        return i;
     }
-    return eql;
+    return 0;
 }
 
 pub fn solve1(input: [][][]const u8) !usize {
     var res: usize = 0;
-    outer: for (input) |grid| {
-        for (0..grid.len) |i| {
-            if (isReflection(grid, false, i)) {
-                res += 100 * (i + 1);
-                continue :outer;
-            }
-        }
-        for (0..grid[0].len) |i| {
-            if (isReflection(grid, true, i)) {
-                res += i + 1;
-                break;
-            }
-        }
+    for (input) |grid| {
+        const r = findReflection(grid, false, 0);
+        if (r != 0) res += 100 * r;
+        if (r == 0) res += findReflection(grid, true, 0);
     }
     return res;
 }
 
 pub fn solve2(input: [][][]const u8) !usize {
     var res: usize = 0;
-    outer: for (input) |grid| {
-        var m = try alloc.alloc([]u8, grid.len);
-        for (grid, 0..) |line, i| {
-            m[i] = try alloc.alloc(u8, grid[0].len);
-            std.mem.copyForwards(u8, m[i], line);
-        }
-        var x: usize = 0;
-        var y: usize = 0;
-        var mem_hori = try alloc.alloc(?bool, grid.len);
-        var mem_vert = try alloc.alloc(?bool, grid[0].len);
-        for (0..grid.len) |i| mem_hori[i] = null;
-        for (0..grid[0].len) |i| mem_vert[i] = null;
-
-        while (true) {
-            const old = m[x][y];
-            if (old == '.') m[x][y] = '#';
-            if (old == '#') m[x][y] = '.';
-            for (0..grid.len) |i| {
-                if (mem_hori[i] == null) mem_hori[i] = isReflection(grid, false, i);
-                if (mem_hori[i].?) continue;
-                if (isReflection(m, false, i)) {
-                    res += 100 * (i + 1);
-                    continue :outer;
-                }
-            }
-            for (0..grid[0].len) |i| {
-                if (mem_vert[i] == null) mem_vert[i] = isReflection(grid, true, i);
-                if (mem_vert[i].?) continue;
-                if (isReflection(m, true, i)) {
-                    res += i + 1;
-                    continue :outer;
-                }
-            }
-            m[x][y] = old;
-            if (y < grid[0].len) y += 1;
-            if (y == grid[0].len) {
-                y = 0;
-                x = x + 1;
-            }
-            if (x == grid.len) unreachable;
-        }
+    for (input) |grid| {
+        const r = findReflection(grid, false, 1);
+        if (r != 0) res += 100 * r;
+        if (r == 0) res += findReflection(grid, true, 1);
     }
     return res;
 }
