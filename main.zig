@@ -16,6 +16,8 @@ const days = [_]type{
     @import("day11"),
     @import("day12"),
     @import("day13"),
+    @import("day14"),
+    @import("day15"),
 };
 
 pub fn main() !void {
@@ -179,31 +181,31 @@ fn heap() !void {
     var total: usize = 0;
 
     inline for (days, 0..) |d, i| {
-        if (@hasDecl(d, "alloc")) {
-            h = start_heap;
-            good_heap = h;
-            bad_heap = 0;
-            const heap_size = while (true) {
-                const buffer = try std.heap.c_allocator.alloc(u8, h);
-                var fba = std.heap.FixedBufferAllocator.init(buffer);
-                const alloc = fba.allocator();
-
-                if (run(alloc, d, i + 1, false)) |_| {
-                    good_heap = h;
-                    h -= (good_heap - bad_heap) / 2;
-                } else |_| {
-                    bad_heap = h;
-                    h += (good_heap - bad_heap) / 2;
-                }
-                if (good_heap == bad_heap + 1 or good_heap == bad_heap) {
-                    break good_heap;
-                }
-            };
-            std.debug.print("day{}: {d:.3}KB\n", .{ i + 1, @as(f64, @floatFromInt(heap_size)) / 1000.0 });
-            total += heap_size;
-        } else {
+        if (!@hasDecl(d, "alloc")) {
             std.debug.print("day{}: no heap\n", .{i + 1});
+            continue;
         }
+        h = start_heap;
+        good_heap = h;
+        bad_heap = 0;
+        const heap_size = while (true) {
+            const buffer = try std.heap.c_allocator.alloc(u8, h);
+            var fba = std.heap.FixedBufferAllocator.init(buffer);
+            const alloc = fba.allocator();
+
+            if (run(alloc, d, i + 1, false)) |_| {
+                good_heap = h;
+                h -= (good_heap - bad_heap) / 2;
+            } else |_| {
+                bad_heap = h;
+                h += (good_heap - bad_heap) / 2;
+            }
+            if (good_heap == bad_heap + 1 or good_heap == bad_heap) {
+                break good_heap;
+            }
+        };
+        std.debug.print("day{}: {d:.3}KB\n", .{ i + 1, @as(f64, @floatFromInt(heap_size)) / 1000.0 });
+        total += heap_size;
     }
     std.debug.print("total: {d:.3}MB\n", .{@as(f64, @floatFromInt(total)) / 1000000.0});
 }
