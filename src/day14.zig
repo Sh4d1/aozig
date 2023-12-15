@@ -1,129 +1,170 @@
 const std = @import("std");
 pub var alloc = std.heap.page_allocator;
 
-pub fn solve1(input: [][]const u8) !usize {
-    var g = try alloc.alloc([]u8, input.len);
-    for (0..input.len) |i| {
-        g[i] = try alloc.alloc(u8, input[0].len);
-        for (0..input[0].len) |j| {
-            g[i][j] = input[i][j];
-        }
-    }
-    north(g);
-    return load(g);
+const Input = struct {
+    g: []u8,
+    n: usize,
+};
+
+pub fn solve1(input: Input) !usize {
+    var g = try alloc.alloc(u8, input.n * input.n);
+    for (0..input.n * input.n) |i| g[i] = input.g[i];
+    try north(g, input.n);
+    return load(g, input.n);
 }
 
-pub fn north(g: [][]u8) void {
-    for (1..g.len) |i| {
-        for (0..g[0].len) |j| {
-            if (g[i][j] == 'O') {
-                for (1..i + 1) |_k| {
-                    const k = i - _k;
-                    if (g[k][j] != '.') break;
-                    std.mem.swap(u8, &g[k][j], &g[k + 1][j]);
-                }
+pub fn north(g: []u8, n: usize) !void {
+    var stops = try alloc.alloc(usize, n);
+    for (0..n) |i| stops[i] = 0;
+
+    var p: usize = 0;
+    for (0..n) |i| {
+        for (0..n) |j| {
+            switch (g[p]) {
+                'O' => {
+                    g[p] = '.';
+                    g[stops[j] * n + j] = 'O';
+                    stops[j] += 1;
+                },
+                '#' => stops[j] = i + 1,
+                else => {},
             }
+            p += 1;
         }
     }
 }
 
-pub fn west(g: [][]u8) void {
-    for (1..g[0].len) |j| {
-        for (0..g.len) |i| {
-            if (g[i][j] == 'O') {
-                for (1..j + 1) |_k| {
-                    const k = j - _k;
-                    if (g[i][k] != '.') break;
-                    std.mem.swap(u8, &g[i][k], &g[i][k + 1]);
-                }
+pub fn west(g: []u8, n: usize) !void {
+    var start: usize = 0;
+    var p: usize = 0;
+    for (0..n) |_| {
+        var stop: usize = 0;
+        for (0..n) |i| {
+            switch (g[p]) {
+                'O' => {
+                    g[p] = '.';
+                    g[start + stop] = 'O';
+                    stop += 1;
+                },
+                '#' => stop = i + 1,
+                else => {},
             }
+            p += 1;
         }
+        start += n;
     }
 }
 
-pub fn south(g: [][]u8) void {
-    for (1..g.len) |_i| {
-        const i = g.len - _i - 1;
-        for (0..g[0].len) |j| {
-            if (g[i][j] == 'O') {
-                for (i + 1..g.len) |k| {
-                    if (g[k][j] != '.') break;
-                    std.mem.swap(u8, &g[k][j], &g[k - 1][j]);
-                }
+pub fn south(g: []u8, n: usize) !void {
+    var stops = try alloc.alloc(usize, n);
+    for (0..n) |i| stops[i] = n - 1;
+
+    var p: usize = n * n - 1;
+    for (0..n) |_i| {
+        const i = n - _i - 1;
+        for (0..n) |_j| {
+            const j = n - _j - 1;
+            switch (g[p]) {
+                'O' => {
+                    g[p] = '.';
+                    g[stops[j] * n + j] = 'O';
+                    if (stops[j] > 0) stops[j] -= 1;
+                },
+                '#' => {
+                    if (i > 0) stops[j] = i - 1 else {}
+                },
+                else => {},
             }
+            if (p > 0) p -= 1;
         }
     }
 }
 
-pub fn east(g: [][]u8) void {
-    for (1..g[0].len) |_j| {
-        const j = g[0].len - _j - 1;
-        for (0..g.len) |i| {
-            if (g[i][j] == 'O') {
-                for (j + 1..g[0].len) |k| {
-                    if (g[i][k] != '.') break;
-                    std.mem.swap(u8, &g[i][k], &g[i][k - 1]);
-                }
+pub fn east(g: []u8, n: usize) !void {
+    var start: usize = n * n - n;
+    var p: usize = n * n - 1;
+    for (0..n) |_| {
+        var stop: usize = n - 1;
+        for (0..n) |_j| {
+            const j = n - _j - 1;
+            switch (g[p]) {
+                'O' => {
+                    g[p] = '.';
+                    g[start + stop] = 'O';
+                    if (stop > 0) stop -= 1;
+                },
+                '#' => if (j > 0) {
+                    stop = j - 1;
+                },
+                else => {},
             }
+            if (p > 0) p -= 1;
         }
+        if (start >= n) start -= n;
     }
 }
 
-pub fn cycle(g: [][]u8) void {
-    north(g);
-    west(g);
-    south(g);
-    east(g);
+pub fn cycle(g: []u8, n: usize) !void {
+    try north(g, n);
+    try west(g, n);
+    try south(g, n);
+    try east(g, n);
 }
 
-pub fn load(g: [][]u8) usize {
+pub fn load(g: []u8, n: usize) usize {
     var res: usize = 0;
-    for (0..g.len) |i| {
-        for (0..g[0].len) |j| {
-            if (g[i][j] == 'O') res += g.len - i;
+    for (0..n) |i| {
+        for (0..n) |j| {
+            if (g[i * n + j] == 'O') res += n - i;
         }
     }
     return res;
 }
-pub fn hash(key: [][]u8) u64 {
-    var h = std.hash.Wyhash.init(123);
-    for (key) |l| h.update(l);
+pub fn hash(key: []u8) u64 {
+    var h = std.hash.XxHash3.init(0);
+    h.update(key);
     return h.final();
 }
 
-pub fn solve2(input: [][]const u8) !usize {
-    var hm = std.AutoHashMap(usize, usize).init(alloc);
-    var g = try alloc.alloc([]u8, input.len);
-    for (0..input.len) |i| {
-        g[i] = try alloc.alloc(u8, input[0].len);
-        for (0..input[0].len) |j| {
-            g[i][j] = input[i][j];
-        }
-    }
+pub fn solve2(input: Input) !usize {
+    var mem = try alloc.alloc(?u64, 500);
+    for (0..500) |i| mem[i] = null;
+
+    var g = try alloc.alloc(u8, input.n * input.n);
+    for (0..input.n * input.n) |i| g[i] = input.g[i];
+
     const n = 1000000000;
     var ni: usize = 0;
     while (true) {
-        if (hm.get(hash(g))) |v| {
-            const rem_cycle = @rem(n - ni, ni - v);
-            for (0..rem_cycle) |_| cycle(g);
-            return load(g);
+        const h = hash(g);
+        for (mem, 0..) |m, i| {
+            if (m == null) break;
+            if (m.? == h) {
+                const rem_cycle = @rem(n - ni, ni - i);
+                for (0..rem_cycle) |_| try cycle(g, input.n);
+                return load(g, input.n);
+            }
         }
-        try hm.put(hash(g), ni);
+        mem[ni] = h;
         ni += 1;
-        cycle(g);
+        try cycle(g, input.n);
     }
-
     unreachable;
 }
 
-pub fn parse(input: []const u8) ![][]const u8 {
-    var res = std.ArrayList([]const u8).init(alloc);
-    var patterns = std.mem.tokenizeScalar(u8, input, '\n');
+pub fn parse(input: []const u8) !Input {
+    var res = std.ArrayList(u8).init(alloc);
+    var lines = std.mem.tokenizeScalar(u8, input, '\n');
+    var n: usize = undefined;
 
-    while (patterns.next()) |lines| {
-        try res.append(lines);
+    while (lines.next()) |line| {
+        n = line.len;
+        try res.appendSlice(line);
     }
-    return try res.toOwnedSlice();
+    return Input{
+        .n = n,
+        .g = try res.toOwnedSlice(),
+    };
 }
 
 const test_data =

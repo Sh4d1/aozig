@@ -5,54 +5,62 @@ const Row = struct {
     patterns: []const u8,
     list: []usize,
 
-    pub fn init(self: Row) ![]?usize {
-        const size = self.patterns.len * (self.list.len + 1);
-        var mem = try alloc.alloc(?usize, size);
-        for (0..size) |i| mem[i] = null;
-        return mem;
+    fn key(self: Row, i: usize, j: usize) usize {
+        return i * (self.list.len + 1) + j;
     }
 
-    pub fn solve(self: Row, mem: *[]?usize, pattern_index: usize, list_index: usize) !usize {
-        if (pattern_index >= self.patterns.len) return @intFromBool(list_index == self.list.len);
+    pub fn solve2(self: Row) !usize {
+        var m = try alloc.alloc(usize, (self.patterns.len + 1) * (self.list.len + 1));
+        for (0..(self.patterns.len + 1) * (self.list.len + 1)) |i| m[i] = 0;
+        m[0] = 1;
+        for (self.patterns, 0..) |p, i| {
+            for (0..@min(i + 1, self.list.len)) |j| {
+                const cur = m[self.key(i, j)];
+                if (m[self.key(i, j)] == 0) continue;
 
-        const mem_key: usize = pattern_index * (self.list.len + 1) + list_index;
-        if (mem.*[mem_key]) |v| return v;
+                if (p == '.' or p == '?') m[self.key(i + 1, j)] += cur;
+                if (p == '.') continue;
+                if (i + self.list[j] > self.patterns.len) continue;
 
-        var res: usize = 0;
-        const current_pattern = self.patterns[pattern_index];
+                const have_dot = for (i..i + self.list[j]) |ii| {
+                    if (self.patterns[ii] == '.') break true;
+                } else false;
+                if (have_dot) continue;
 
-        if (current_pattern == '.' or current_pattern == '?') res += try self.solve(mem, pattern_index + 1, list_index);
+                if (i + self.list[j] == self.patterns.len) {
+                    if (j == self.list.len - 1) m[self.key(self.patterns.len, self.list.len)] += cur;
+                    continue;
+                }
 
-        if (current_pattern == '#' or current_pattern == '?') {
-            if (list_index < self.list.len and pattern_index + self.list[list_index] <= self.patterns.len) {
-                if (for (pattern_index..pattern_index + self.list[list_index]) |i| {
-                    if (self.patterns[i] == '.') break false;
-                } else true) {
-                    if (pattern_index + self.list[list_index] == self.patterns.len or self.patterns[pattern_index + self.list[list_index]] != '#') {
-                        res += try self.solve(mem, pattern_index + self.list[list_index] + 1, list_index + 1);
+                if (self.patterns[i + self.list[j]] != '#') {
+                    if (j == self.list.len - 1) {
+                        const have_pound = for (i + self.list[j]..self.patterns.len) |ii| {
+                            if (self.patterns[ii] == '#') break true;
+                        } else false;
+                        if (have_pound) continue;
+                        m[self.key(self.patterns.len, self.list.len)] += cur;
+                        continue;
                     }
+                    m[self.key(i + self.list[j] + 1, j + 1)] += cur;
                 }
             }
         }
 
-        mem.*[mem_key] = res;
-        return res;
+        return m[self.key(self.patterns.len, self.list.len)];
     }
 };
 
 pub fn solve1(input: []Row) !usize {
     var res: usize = 0;
     for (input) |r| {
-        var m = try r.init();
-        res += try r.solve(&m, 0, 0);
+        res += try r.solve2();
     }
     return res;
 }
 pub fn solve2(input: []Row) !usize {
     var res: usize = 0;
     for (input) |r| {
-        var m = try r.init();
-        res += try r.solve(&m, 0, 0);
+        res += try r.solve2();
     }
     return res;
 }
