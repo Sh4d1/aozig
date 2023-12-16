@@ -18,6 +18,7 @@ const days = [_]type{
     @import("day13"),
     @import("day14"),
     @import("day15"),
+    @import("day16"),
 };
 
 pub fn main() !void {
@@ -117,7 +118,9 @@ fn bench(alloc: A, n: usize) !void {
         var runs_list = std.ArrayList(i128).init(std.heap.page_allocator);
 
         for (0..n - 1) |j| {
-            const t = try run(alloc, d, i + 1, false);
+            var arena = std.heap.ArenaAllocator.init(alloc);
+            const t = try run(arena.allocator(), d, i + 1, false);
+            arena.deinit();
             try runs_list.append(t);
             totals[j] += t;
         }
