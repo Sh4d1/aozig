@@ -19,6 +19,7 @@ const days = [_]type{
     @import("day14"),
     @import("day15"),
     @import("day16"),
+    @import("day17"),
 };
 
 pub fn main() !void {
