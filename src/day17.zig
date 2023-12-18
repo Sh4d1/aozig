@@ -2,27 +2,25 @@ const std = @import("std");
 pub var alloc = std.heap.page_allocator;
 
 const State = struct {
-    x: usize,
-    y: usize,
+    i: usize,
     dir: Dir,
     consecutive: usize,
 
-    fn next(self: State, dir: Dir, input: [][]const u8) ?struct { State, usize } {
-        var x = self.x;
-        var y = self.y;
+    fn next(self: State, dir: Dir, grid: Grid) ?struct { State, usize } {
+        var i = self.i;
         switch (dir) {
-            .left => if (y == 0) return null,
-            .right => if (y >= input[0].len - 1) return null,
-            .up => if (x == 0) return null,
-            .down => if (x >= input.len - 1) return null,
+            .left => if (@mod(i, grid.offset) == 0) return null,
+            .right => if (@mod(i + 1, grid.offset) == 0) return null,
+            .up => if (i <= grid.offset) return null,
+            .down => if (i + grid.offset >= grid.g.len) return null,
         }
         switch (dir) {
-            .left => y -= 1,
-            .right => y += 1,
-            .up => x -= 1,
-            .down => x += 1,
+            .left => i -= 1,
+            .right => i += 1,
+            .up => i -= grid.offset,
+            .down => i += grid.offset,
         }
-        return .{ .{ .x = x, .y = y, .dir = dir, .consecutive = if (dir == self.dir) self.consecutive + 1 else 1 }, input[x][y] };
+        return .{ .{ .i = i, .dir = dir, .consecutive = if (dir == self.dir) self.consecutive + 1 else 1 }, grid.g[i] };
     }
 };
 
@@ -31,6 +29,15 @@ const Dir = enum {
     right,
     up,
     down,
+
+    pub fn toIdx(self: Dir) usize {
+        return switch (self) {
+            .left => 0,
+            .right => 1,
+            .up => 2,
+            .down => 3,
+        };
+    }
 
     pub fn turnLeft(self: Dir) Dir {
         return switch (self) {
@@ -50,88 +57,86 @@ const Dir = enum {
     }
 };
 
+const DirSet = std.EnumSet(Dir);
+
 const Grid = struct {
-    g: [][]const u8,
-
-    pub fn nextp1(self: Grid, s: State) ![]struct { State, usize } {
-        var res = std.ArrayList(struct { State, usize }).init(alloc);
-        if (s.consecutive < 3) if (s.next(s.dir, self.g)) |ns| try res.append(ns);
-        if (s.next(s.dir.turnLeft(), self.g)) |ns| try res.append(ns);
-        if (s.next(s.dir.turnRight(), self.g)) |ns| try res.append(ns);
-        return res.toOwnedSlice();
-    }
-
-    pub fn nextp2(self: Grid, s: State) ![]struct { State, usize } {
-        var res = std.ArrayList(struct { State, usize }).init(alloc);
-        if (s.consecutive < 10) if (s.next(s.dir, self.g)) |ns| try res.append(ns);
-        if (s.consecutive >= 4) {
-            if (s.next(s.dir.turnLeft(), self.g)) |ns| try res.append(ns);
-            if (s.next(s.dir.turnRight(), self.g)) |ns| try res.append(ns);
-        }
-        return res.toOwnedSlice();
-    }
-
-    pub fn isEnd(self: Grid, s: State) bool {
-        return s.x == self.g.len - 1 and s.y == self.g[0].len - 1;
-    }
-
-    pub fn isEnd2(self: Grid, s: State) bool {
-        return s.x == self.g.len - 1 and s.y == self.g[0].len - 1 and s.consecutive >= 4;
-    }
+    g: []u8,
+    offset: usize,
 };
 
 fn lessThan(_: void, a: struct { State, usize }, b: struct { State, usize }) std.math.Order {
     return std.math.order(a[1], b[1]);
 }
 
-pub fn dijkstra(grid: Grid, next: *const fn (grid: Grid, node: State) std.mem.Allocator.Error![]struct { State, usize }, isEnd: *const fn (grid: Grid, node: State) bool) !usize {
+pub fn dijkstra(grid: Grid, min: usize, max: usize) !usize {
     var q = std.PriorityDequeue(
         struct { State, usize },
         void,
         lessThan,
     ).init(alloc, void{});
 
-    try q.add(.{ State{ .x = 0, .y = 0, .dir = Dir.right, .consecutive = 0 }, 0 });
-    try q.add(.{ State{ .x = 0, .y = 0, .dir = Dir.down, .consecutive = 0 }, 0 });
+    try q.add(.{ State{ .i = 0, .dir = Dir.right, .consecutive = 0 }, 0 });
+    try q.add(.{ State{ .i = 0, .dir = Dir.down, .consecutive = 0 }, 0 });
 
-    var mem = std.AutoHashMap(State, usize).init(alloc);
+    var visited = try alloc.alloc(DirSet, grid.g.len);
+    @memset(visited, DirSet.initEmpty());
+
+    var mem = try alloc.alloc(usize, grid.g.len * 4);
+    @memset(mem, std.math.maxInt(usize));
 
     while (q.removeMinOrNull()) |n| {
         const node = n[0];
         const cost = n[1];
-        if (isEnd(grid, node)) return cost;
+        if (node.i == grid.g.len - 1) return cost;
+        if (visited[node.i].contains(node.dir)) continue;
 
-        for (try next(grid, node)) |nn| {
-            if (mem.get(nn[0])) |v| if (nn[1] + cost >= v) continue;
-            try mem.put(nn[0], nn[1] + cost);
-            try q.add(.{ nn[0], nn[1] + cost });
+        var tmp = node;
+        var total_cost: usize = 0;
+        for (1..max + 1) |i| {
+            if (tmp.next(node.dir, grid)) |nn| {
+                total_cost += nn[1];
+                if (i >= min) {
+                    const idx_left = nn[0].i + grid.g.len * nn[0].dir.turnLeft().toIdx();
+                    const idx_right = nn[0].i + grid.g.len * nn[0].dir.turnRight().toIdx();
+                    if (total_cost + cost < mem[idx_left]) {
+                        mem[idx_left] = total_cost + cost;
+                        try q.add(.{ .{ .i = nn[0].i, .dir = nn[0].dir.turnLeft(), .consecutive = 0 }, total_cost + cost });
+                    }
+                    if (total_cost + cost < mem[idx_right]) {
+                        mem[idx_right] = total_cost + cost;
+                        try q.add(.{ .{ .i = nn[0].i, .dir = nn[0].dir.turnRight(), .consecutive = 0 }, total_cost + cost });
+                    }
+                }
+                tmp = nn[0];
+            } else break;
         }
     }
     unreachable;
 }
 
-pub fn solve1(input: [][]const u8) !usize {
-    const g = Grid{ .g = input };
-    return dijkstra(g, Grid.nextp1, Grid.isEnd);
+pub fn solve1(input: Grid) !usize {
+    return dijkstra(input, 1, 3);
 }
 
-pub fn solve2(input: [][]const u8) !usize {
-    const g = Grid{ .g = input };
-    return dijkstra(g, Grid.nextp2, Grid.isEnd2);
+pub fn solve2(input: Grid) !usize {
+    return dijkstra(input, 4, 10);
 }
 
-pub fn parse(input: []const u8) ![][]const u8 {
-    var res = std.ArrayList([]const u8).init(alloc);
+pub fn parse(input: []const u8) !Grid {
+    var res = std.ArrayList(u8).init(alloc);
+    var offset: ?usize = null;
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |l| {
-        var line = std.ArrayList(u8).init(alloc);
+        if (offset == null) offset = l.len;
         for (l) |c| {
-            try line.append(c - '0');
+            try res.append(c - '0');
         }
-        try res.append(try line.toOwnedSlice());
     }
-    return try res.toOwnedSlice();
+    return Grid{
+        .g = try res.toOwnedSlice(),
+        .offset = offset.?,
+    };
 }
 
 const test_data =
