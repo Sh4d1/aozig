@@ -103,7 +103,7 @@ pub fn energize(input: [][]const u8, mem: []?Pos, start: Pos) !usize {
     var q = std.ArrayList(Pos).init(alloc);
     try q.append(start);
 
-    while (q.popOrNull()) |_p| {
+    outer: while (q.popOrNull()) |_p| {
         var p = _p;
 
         if (mem[p.idx()]) |*mp| {
@@ -115,9 +115,21 @@ pub fn energize(input: [][]const u8, mem: []?Pos, start: Pos) !usize {
             mem[p.idx()].?.visited.insert(p.dir);
         }
 
+        while (p.get(input) == '.') {
+            if (!p.advance()) continue :outer;
+
+            if (mem[p.idx()]) |*mp| {
+                if (mp.visited.contains(p.dir)) continue :outer;
+                mp.visited.insert(p.dir);
+            } else {
+                res += 1;
+                mem[p.idx()] = p;
+                mem[p.idx()].?.visited.insert(p.dir);
+            }
+        }
+
         const cur = p.get(input);
         switch (cur) {
-            '.' => {},
             '/', '\\' => |m| p.handleMirror(m),
             '-', '|' => |m| {
                 if (p.handleSplitter(m)) |newp| {
@@ -125,6 +137,7 @@ pub fn energize(input: [][]const u8, mem: []?Pos, start: Pos) !usize {
                     if (pos.advance()) try q.append(pos);
                 }
             },
+            '.' => unreachable,
             else => unreachable,
         }
         if (p.advance()) try q.append(p);
