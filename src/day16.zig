@@ -1,31 +1,29 @@
 const std = @import("std");
 pub var alloc = std.heap.page_allocator;
 
+const Grid = struct {
+    g: []const u8,
+    offset: usize,
+};
+
 const Pos = struct {
-    x: usize,
-    y: usize,
+    p: usize,
     dir: DirEnum,
     visited: Dir = Dir.initEmpty(),
 
-    n: usize,
-
-    pub fn idx(self: Pos) usize {
-        return self.x * self.n + self.y;
-    }
-
-    pub fn advance(self: *Pos) bool {
+    pub fn advance(self: *Pos, g: Grid) bool {
         switch (self.dir) {
             .left => {
-                if (self.y > 0) self.y -= 1 else return false;
+                if (@mod(self.p, g.offset) != 0) self.p -= 1 else return false;
             },
             .right => {
-                if (self.y < self.n - 1) self.y += 1 else return false;
+                if (@mod(self.p, g.offset) != g.offset - 1) self.p += 1 else return false;
             },
             .up => {
-                if (self.x > 0) self.x -= 1 else return false;
+                if (self.p >= g.offset) self.p -= g.offset else return false;
             },
             .down => {
-                if (self.x < self.n - 1) self.x += 1 else return false;
+                if (self.p + g.offset < g.g.len) self.p += g.offset else return false;
             },
         }
         return true;
@@ -59,7 +57,7 @@ const Pos = struct {
                     .left, .right => return null,
                     .up, .down => {
                         self.dir = Left;
-                        return .{ .x = self.x, .y = self.y, .dir = Right, .n = self.n };
+                        return .{ .p = self.p, .dir = Right };
                     },
                 }
             },
@@ -68,7 +66,7 @@ const Pos = struct {
                     .up, .down => return null,
                     .left, .right => {
                         self.dir = Up;
-                        return .{ .x = self.x, .y = self.y, .dir = Down, .n = self.n };
+                        return .{ .p = self.p, .dir = Down };
                     },
                 }
             },
@@ -77,8 +75,8 @@ const Pos = struct {
         return null;
     }
 
-    pub fn get(self: *Pos, input: [][]const u8) u8 {
-        return input[self.x][self.y];
+    pub fn get(self: *Pos, input: Grid) u8 {
+        return input.g[self.p];
     }
 };
 
@@ -96,8 +94,8 @@ const Right = DirEnum.right;
 const Up = DirEnum.up;
 const Down = DirEnum.down;
 
-pub fn energize(input: [][]const u8, mem: []?Pos, start: Pos) !usize {
-    for (0..input.len * input.len) |i| mem[i] = null;
+pub fn energize(input: Grid, mem: []?Pos, start: Pos) !usize {
+    for (0..input.g.len) |i| mem[i] = null;
 
     var res: usize = 0;
     var q = std.ArrayList(Pos).init(alloc);
@@ -106,25 +104,25 @@ pub fn energize(input: [][]const u8, mem: []?Pos, start: Pos) !usize {
     outer: while (q.popOrNull()) |_p| {
         var p = _p;
 
-        if (mem[p.idx()]) |*mp| {
+        if (mem[p.p]) |*mp| {
             if (mp.visited.contains(p.dir)) continue;
             mp.visited.insert(p.dir);
         } else {
             res += 1;
-            mem[p.idx()] = p;
-            mem[p.idx()].?.visited.insert(p.dir);
+            mem[p.p] = p;
+            mem[p.p].?.visited.insert(p.dir);
         }
 
         while (p.get(input) == '.') {
-            if (!p.advance()) continue :outer;
+            if (!p.advance(input)) continue :outer;
 
-            if (mem[p.idx()]) |*mp| {
+            if (mem[p.p]) |*mp| {
                 if (mp.visited.contains(p.dir)) continue :outer;
                 mp.visited.insert(p.dir);
             } else {
                 res += 1;
-                mem[p.idx()] = p;
-                mem[p.idx()].?.visited.insert(p.dir);
+                mem[p.p] = p;
+                mem[p.p].?.visited.insert(p.dir);
             }
         }
 
@@ -134,45 +132,48 @@ pub fn energize(input: [][]const u8, mem: []?Pos, start: Pos) !usize {
             '-', '|' => |m| {
                 if (p.handleSplitter(m)) |newp| {
                     var pos = newp;
-                    if (pos.advance()) try q.append(pos);
+                    if (pos.advance(input)) try q.append(pos);
                 }
             },
             '.' => unreachable,
             else => unreachable,
         }
-        if (p.advance()) try q.append(p);
+        if (p.advance(input)) try q.append(p);
     }
     return res;
 }
 
-pub fn solve1(input: [][]const u8) !usize {
-    const mem = try alloc.alloc(?Pos, input.len * input.len);
-    return try energize(input, mem, Pos{ .x = 0, .y = 0, .n = input.len, .dir = Right });
+pub fn solve1(input: Grid) !usize {
+    const mem = try alloc.alloc(?Pos, input.g.len);
+    return try energize(input, mem, Pos{ .p = 0, .dir = Right });
 }
 
-pub fn solve2(input: [][]const u8) !usize {
+pub fn solve2(input: Grid) !usize {
     var res: usize = 0;
-    const mem = try alloc.alloc(?Pos, input.len * input.len);
+    const mem = try alloc.alloc(?Pos, input.g.len);
 
-    for (0..input.len) |j| {
-        res = @max(res, try energize(input, mem, Pos{ .x = 0, .y = j, .n = input.len, .dir = Down }));
-        res = @max(res, try energize(input, mem, Pos{ .x = input.len - 1, .y = j, .n = input.len, .dir = Up }));
-    }
-    for (0..input.len) |i| {
-        res = @max(res, try energize(input, mem, Pos{ .x = i, .y = 0, .n = input.len, .dir = Right }));
-        res = @max(res, try energize(input, mem, Pos{ .x = i, .y = input.len - 1, .n = input.len, .dir = Left }));
+    for (0..input.offset) |j| {
+        res = @max(res, try energize(input, mem, Pos{ .p = j, .dir = Down }));
+        res = @max(res, try energize(input, mem, Pos{ .p = input.g.len - 1 - j, .dir = Down }));
+        res = @max(res, try energize(input, mem, Pos{ .p = j * input.offset, .dir = Right }));
+        res = @max(res, try energize(input, mem, Pos{ .p = j * input.offset - 1, .dir = Right }));
     }
     return res;
 }
 
-pub fn parse(input: []const u8) ![][]const u8 {
-    var res = std.ArrayList([]const u8).init(alloc);
+pub fn parse(input: []const u8) !Grid {
+    var res = std.ArrayList(u8).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
+    var offset: usize = undefined;
 
     while (lines.next()) |l| {
-        try res.append(l);
+        offset = l.len;
+        try res.appendSlice(l);
     }
-    return try res.toOwnedSlice();
+    return Grid{
+        .g = try res.toOwnedSlice(),
+        .offset = offset,
+    };
 }
 
 const test_data =
