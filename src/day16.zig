@@ -154,9 +154,9 @@ pub fn solve2(input: Grid) !usize {
 
     for (0..input.offset) |j| {
         res = @max(res, try energize(input, mem, Pos{ .p = j, .dir = Down }));
-        res = @max(res, try energize(input, mem, Pos{ .p = input.g.len - 1 - j, .dir = Down }));
+        res = @max(res, try energize(input, mem, Pos{ .p = input.g.len - 1 - j, .dir = Up }));
         res = @max(res, try energize(input, mem, Pos{ .p = j * input.offset, .dir = Right }));
-        res = @max(res, try energize(input, mem, Pos{ .p = j * input.offset - 1, .dir = Right }));
+        res = @max(res, try energize(input, mem, Pos{ .p = (j + 1) * input.offset - 1, .dir = Left }));
     }
     return res;
 }

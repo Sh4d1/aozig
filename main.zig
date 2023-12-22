@@ -23,6 +23,8 @@ const days = [_]type{
     @import("day18"),
     @import("day19"),
     @import("day20"),
+    @import("day21"),
+    @import("day22"),
 };
 
 pub fn main() !void {
@@ -69,36 +71,36 @@ fn run(alloc: A, comptime d: type, comptime day: usize, comptime print: bool) !i
         d.alloc = alloc;
     }
 
+    if (print) std.debug.print("day{any}:", .{day});
+
+    const start = time.nanoTimestamp();
+    const input = try d.parse(data);
+    const parse = time.nanoTimestamp() - start;
+    if (print) std.debug.print(" parsing:{d:.5}ms", .{@as(f64, @floatFromInt(parse)) / 1000000.0});
+
+    const startp1 = time.nanoTimestamp();
+    const s1 = d.solve1(input);
+    const p1 = time.nanoTimestamp() - startp1;
+    if (print) std.debug.print(" p1:{d:.5}ms", .{@as(f64, @floatFromInt(p1)) / 1000000.0});
+
     if (@hasDecl(d, "parse2")) {
-        const start = time.nanoTimestamp();
-        const input = try d.parse(data);
-        const parse = time.nanoTimestamp();
+        const startparse2 = time.nanoTimestamp();
         const input2 = try d.parse2(data);
-        const parse2 = time.nanoTimestamp();
-        const s1 = d.solve1(input);
-        const p1 = time.nanoTimestamp();
+        const parse2 = time.nanoTimestamp() - startparse2;
+        if (print) std.debug.print(" parsing2:{d:.5}ms", .{@as(f64, @floatFromInt(parse2)) / 1000000.0});
+        const startp2 = time.nanoTimestamp();
         const s2 = d.solve2(input2);
-        const p2 = time.nanoTimestamp();
-
-        if (print) {
-            std.debug.print("day{any}: p1: {any} p2: {any}\n", .{ day, s1, s2 });
-            std.debug.print("day{any}: parsing:{d:.5}ms parsing2:{d:.5}ms p1:{d:.5}ms p2:{d:.5}ms\n", .{ day, @as(f64, @floatFromInt(parse - start)) / 1000000.0, @as(f64, @floatFromInt(parse2 - parse)) / 1000000.0, @as(f64, @floatFromInt(p1 - parse)) / 1000000.0, @as(f64, @floatFromInt(p2 - p1)) / 1000000.0 });
-        }
-        return p2 - start;
+        const p2 = time.nanoTimestamp() - startp2;
+        if (print) std.debug.print(" p2:{d:.5}ms\n", .{@as(f64, @floatFromInt(p2)) / 1000000.0});
+        if (print) std.debug.print("day{any}: p1: {any} p2: {any}\n", .{ day, s1, s2 });
+        return parse + p1 + parse2 + p2;
     } else {
-        const start = time.nanoTimestamp();
-        const input = try d.parse(data);
-        const parse = time.nanoTimestamp();
-        const s1 = d.solve1(input);
-        const p1 = time.nanoTimestamp();
+        const startp2 = time.nanoTimestamp();
         const s2 = d.solve2(input);
-        const p2 = time.nanoTimestamp();
-
-        if (print) {
-            std.debug.print("day{any}: p1: {any} p2: {any}\n", .{ day, s1, s2 });
-            std.debug.print("day{any}: parsing:{d:.5}ms p1:{d:.5}ms p2:{d:.5}ms\n", .{ day, @as(f64, @floatFromInt(parse - start)) / 1000000.0, @as(f64, @floatFromInt(p1 - parse)) / 1000000.0, @as(f64, @floatFromInt(p2 - p1)) / 1000000.0 });
-        }
-        return p2 - start;
+        const p2 = time.nanoTimestamp() - startp2;
+        if (print) std.debug.print(" p2:{d:.5}ms\n", .{@as(f64, @floatFromInt(p2)) / 1000000.0});
+        if (print) std.debug.print("day{any}: p1: {any} p2: {any}\n", .{ day, s1, s2 });
+        return parse + p1 + p2;
     }
 }
 

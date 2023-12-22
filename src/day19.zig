@@ -8,7 +8,6 @@ const Game = struct {
 
 const Rule = struct {
     name: []const u8,
-
     conds: []Cond,
 };
 
@@ -54,15 +53,8 @@ pub fn solve1(input: Game) !usize {
         outer: while (true) {
             for (cur.conds) |cond| {
                 if (cond.elem != null) {
-                    if (cond.cmp.? == '<') {
-                        if (e.get(cond.elem.?) >= cond.val.?) {
-                            continue;
-                        }
-                    } else {
-                        if (e.get(cond.elem.?) <= cond.val.?) {
-                            continue;
-                        }
-                    }
+                    if (cond.cmp.? == '<' and e.get(cond.elem.?) >= cond.val.?) continue;
+                    if (cond.cmp.? == '>' and e.get(cond.elem.?) <= cond.val.?) continue;
                 }
 
                 if (cond.go[0] == 'R') break :outer;

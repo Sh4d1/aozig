@@ -117,12 +117,7 @@ pub fn solve2(_input: []Inst) !usize {
             const cur = i[0];
             const pulse = i[1];
 
-            if (std.mem.eql(u8, cur, rx_in) and pulse == Pulse.high) {
-                if (rx_src.get(i[2].?).? == null) {
-                    std.debug.print("{s} {any} {s}     {any}\n", .{ i[2].?, pulse, cur, j });
-                    try rx_src.put(i[2].?, j);
-                }
-            }
+            if (std.mem.eql(u8, cur, rx_in) and pulse == Pulse.high and rx_src.get(i[2].?).? == null) try rx_src.put(i[2].?, j);
 
             var ptr = hm.getPtr(cur) orelse continue;
             switch (ptr.module) {
