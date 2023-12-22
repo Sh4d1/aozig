@@ -22,11 +22,24 @@ pub fn get_input(b: *std.Build, year: usize, day: usize) !void {
     try std.fs.cwd().writeFile(b.fmt("src/day{}.txt", .{day}), resp.body.?);
 }
 
+// pub fn test_utils(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode, step: *std.build.Step) !void {
+//     const path = "utils/parser.zig";
+//
+//     const utils_tests = b.addTest(.{
+//         .root_source_file = .{ .path = path },
+//         .target = target,
+//         .optimize = optimize,
+//     });
+//     const run_utils_tests = b.addRunArtifact(utils_tests);
+//     run_utils_tests.step.dependOn(b.getInstallStep());
+//     step.dependOn(&run_utils_tests.step);
+// }
+
 pub fn test_day(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode, day: usize, step: *std.build.Step) !void {
     if (day == 0) {
         return;
     }
-    const utils_module = b.createModule(.{ .source_file = .{ .path = "utils/utils.zig" } });
+    // const utils_module = b.createModule(.{ .source_file = .{ .path = "utils/utils.zig" } });
     const path = b.fmt("src/day{}.zig", .{day});
     std.fs.Dir.access(std.fs.cwd(), path, std.fs.File.OpenFlags{}) catch {
         return;
@@ -41,7 +54,7 @@ pub fn test_day(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builti
         .target = target,
         .optimize = optimize,
     });
-    unit_tests.addModule("utils", utils_module);
+    // unit_tests.addModule("utils", utils_module);
     const run_unit_tests = b.addRunArtifact(unit_tests);
     run_unit_tests.step.dependOn(b.getInstallStep());
     step.dependOn(&run_unit_tests.step);
@@ -51,7 +64,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const utils_module = b.createModule(.{ .source_file = .{ .path = "utils/utils.zig" } });
+    // const utils_module = b.createModule(.{ .source_file = .{ .path = "utils/utils.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "main",
@@ -68,7 +81,8 @@ pub fn build(b: *std.Build) !void {
         std.fs.Dir.access(std.fs.cwd(), b.fmt("src/day{}.txt", .{i}), .{}) catch {
             try get_input(b, 2023, @intCast(i));
         };
-        exe.addModule(b.fmt("day{}", .{i}), b.createModule(.{ .dependencies = &[_]std.build.ModuleDependency{.{ .name = "utils", .module = utils_module }}, .source_file = .{ .path = b.fmt("src/day{}.zig", .{i}) } }));
+        // exe.addModule(b.fmt("day{}", .{i}), b.createModule(.{ .dependencies = &[_]std.build.ModuleDependency{.{ .name = "utils", .module = utils_module }}, .source_file = .{ .path = b.fmt("src/day{}.zig", .{i}) } }));
+        exe.addModule(b.fmt("day{}", .{i}), b.createModule(.{ .source_file = .{ .path = b.fmt("src/day{}.zig", .{i}) } }));
     }
 
     const run_step = b.step("run", "Run");
@@ -86,5 +100,6 @@ pub fn build(b: *std.Build) !void {
             test_day(b, target, optimize, i, &run_cmd.step) catch {};
         }
     }
+    // test_utils(b, target, optimize, &run_cmd.step) catch {};
     run_step.dependOn(&run_cmd.step);
 }
