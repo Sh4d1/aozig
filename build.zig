@@ -35,7 +35,7 @@ pub fn get_input(b: *std.Build, year: usize, day: usize) !void {
 //     step.dependOn(&run_utils_tests.step);
 // }
 
-pub fn test_day(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode, day: usize, step: *std.build.Step) !void {
+pub fn test_day(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.Mode, day: usize, step: *std.Build.Step) !void {
     if (day == 0) {
         return;
     }
@@ -82,7 +82,7 @@ pub fn build(b: *std.Build) !void {
             try get_input(b, 2023, @intCast(i));
         };
         // exe.addModule(b.fmt("day{}", .{i}), b.createModule(.{ .dependencies = &[_]std.build.ModuleDependency{.{ .name = "utils", .module = utils_module }}, .source_file = .{ .path = b.fmt("src/day{}.zig", .{i}) } }));
-        exe.addModule(b.fmt("day{}", .{i}), b.createModule(.{ .source_file = .{ .path = b.fmt("src/day{}.zig", .{i}) } }));
+        exe.root_module.addImport(b.fmt("day{}", .{i}), b.createModule(.{ .root_source_file = .{ .path = b.fmt("src/day{}.zig", .{i}) } }));
     }
 
     const run_step = b.step("run", "Run");
