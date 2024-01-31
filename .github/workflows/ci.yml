@@ -6,11 +6,9 @@ jobs:
   build:
     runs-on: [self-hosted, linux, RISCV64]
     steps:
-      - uses: actions/checkout@v3
-
       - name: Run a one-line script
-        run: echo Hello, world!
+        run: mkdir /opt && cd /opt && git clone https://github.com/Sh4d1/aozig.git && cd aozig
           
-      - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2.2.0          
+      - name: test
+        run: echo $pwd         
       
