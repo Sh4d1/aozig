@@ -72,7 +72,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    exe.linkLibC();
+    // exe.linkLibC();
 
     for (1..25) |i| {
         std.fs.Dir.access(std.fs.cwd(), b.fmt("src/day{}.zig", .{i}), .{}) catch {

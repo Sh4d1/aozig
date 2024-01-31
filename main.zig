@@ -37,7 +37,10 @@ pub fn main() !void {
                 nruns = try std.fmt.parseInt(usize, args[2], 10);
             }
             // TODO: bench alloc
-            return bench(std.heap.c_allocator, nruns);
+            const buffer = try std.heap.GeneralPurposeAllocator(.{}).alloc(u8, 100_000_000);
+            const fba = std.heap.FixedBufferAllocator.init(buffer);
+
+            return bench(fba, nruns);
         }
         if (std.mem.eql(u8, args[1], "heap")) {
             return heap();
