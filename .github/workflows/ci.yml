@@ -7,10 +7,10 @@ jobs:
     runs-on: [self-hosted, linux, RISCV64]
     steps:
       - name: Clone the repo
-        run: git clone https://github.com/Sh4d1/aozig.git
+        run: git clone https://github.com/Sh4d1/aozig.git || git -C aozig pull origin
           
       - name: Install zig
-        run: mkdir zig && wget https://ziglang.org/builds/zig-linux-riscv64-0.12.0-dev.2341+92211135f.tar.xz && tar xf zig-linux-riscv64-0.12.0-dev.2341+92211135f.tar.xz -C zig
+        run: mkdir zig && wget https://ziglang.org/builds/zig-linux-riscv64-0.12.0-dev.2341+92211135f.tar.xz && tar xf zig-linux-riscv64-0.12.0-dev.2341+92211135f.tar.xz -C zig || true
 
       - name: Print
         run: echo $pwd ; ls -la
