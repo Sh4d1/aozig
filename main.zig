@@ -37,10 +37,10 @@ pub fn main() !void {
                 nruns = try std.fmt.parseInt(usize, args[2], 10);
             }
             // TODO: bench alloc
-            const buffer = try std.heap.GeneralPurposeAllocator(.{}).alloc(u8, 100_000_000);
-            const fba = std.heap.FixedBufferAllocator.init(buffer);
+            const buffer = try std.heap.page_allocator.alloc(u8, 100_000_000);
+            var fba = std.heap.FixedBufferAllocator.init(buffer);
 
-            return bench(fba, nruns);
+            return bench(fba.allocator(), nruns);
         }
         if (std.mem.eql(u8, args[1], "heap")) {
             return heap();
@@ -48,16 +48,19 @@ pub fn main() !void {
         day = try std.fmt.parseInt(usize, args[1], 10);
     }
 
-    const alloc = std.heap.c_allocator;
+    // const alloc = std.heap.c_allocator;
 
     var total: i128 = 0;
     inline for (days, 0..) |d, i| {
+        const b = try std.heap.page_allocator.alloc(u8, 100_000_000);
+        var fba = std.heap.FixedBufferAllocator.init(b);
+
         if (day) |di| {
             if (di - 1 == i) {
-                _ = try run(alloc, d, i + 1, true);
+                _ = try run(fba.allocator(), d, i + 1, true);
             }
         } else {
-            total += try run(alloc, d, i + 1, true);
+            total += try run(fba.allocator(), d, i + 1, true);
         }
     }
 
@@ -199,7 +202,7 @@ fn heap() !void {
         good_heap = h;
         bad_heap = 0;
         const heap_size = while (true) {
-            const buffer = try std.heap.c_allocator.alloc(u8, h);
+            const buffer = try std.heap.page_allocator.alloc(u8, h);
             var fba = std.heap.FixedBufferAllocator.init(buffer);
             const alloc = fba.allocator();
 
