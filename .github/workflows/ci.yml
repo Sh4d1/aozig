@@ -7,7 +7,7 @@ jobs:
     runs-on: [self-hosted, linux, RISCV64]
     steps:
       - name: Run a one-line script
-        run: mkdir /opt && cd /opt && git clone https://github.com/Sh4d1/aozig.git && cd aozig
+        run: mkdir -p /opt && cd /opt && git clone https://github.com/Sh4d1/aozig.git && cd aozig
           
       - name: test
         run: echo $pwd         
