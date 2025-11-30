@@ -2,10 +2,11 @@ const std = @import("std");
 const time = std.time;
 const A = std.mem.Allocator;
 
-const generated_days = @import("days_generated");
-const days = generated_days.days;
+/// Default heap size for day solutions (100MB)
+pub const default_heap_size: usize = 100 * 1024 * 1024;
 
-pub fn main() !void {
+/// Executes Advent of Code day solutions with timing information.
+pub fn run(comptime days: anytype) !void {
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     defer std.process.argsFree(std.heap.page_allocator, args);
 
@@ -16,31 +17,36 @@ pub fn main() !void {
             if (args.len > 2) {
                 nruns = try std.fmt.parseInt(usize, args[2], 10);
             }
-            // TODO: bench alloc
-            const buffer = try std.heap.page_allocator.alloc(u8, 100_000_000);
+            const buffer = try std.heap.page_allocator.alloc(u8, default_heap_size);
+            defer std.heap.page_allocator.free(buffer);
             var fba = std.heap.FixedBufferAllocator.init(buffer);
 
-            return bench(fba.allocator(), nruns);
+            return bench(days, fba.allocator(), nruns);
         }
         if (std.mem.eql(u8, args[1], "heap")) {
-            return heap();
+            return heap(days);
         }
         day = try std.fmt.parseInt(usize, args[1], 10);
     }
 
-    // const alloc = std.heap.c_allocator;
-
     var total: i128 = 0;
     inline for (days) |info| {
-        const should_run = if (day) |requested| requested == info.day else true;
+        var should_run = true;
+        if (day) |requested| {
+            should_run = requested == info.day;
+        }
         if (should_run) {
-            const buffer = try std.heap.page_allocator.alloc(u8, 100_000_000);
+            const input_data = try readInput(info.input_path);
+            defer std.heap.page_allocator.free(input_data);
+
+            const buffer = try std.heap.page_allocator.alloc(u8, default_heap_size);
+            defer std.heap.page_allocator.free(buffer);
             var fba = std.heap.FixedBufferAllocator.init(buffer);
 
             if (day) |_| {
-                _ = try run(fba.allocator(), info.module, info.day, info.input_path, true);
+                _ = try runDay(fba.allocator(), info.module, info.day, input_data, true);
             } else {
-                total += try run(fba.allocator(), info.module, info.day, info.input_path, true);
+                total += try runDay(fba.allocator(), info.module, info.day, input_data, true);
             }
         }
     }
@@ -50,38 +56,37 @@ pub fn main() !void {
     }
 }
 
-fn run(alloc: A, comptime d: type, comptime day: usize, comptime input_path: []const u8, comptime print: bool) !i128 {
-    const data = @embedFile(input_path);
-    if (@hasDecl(d, "alloc")) {
-        d.alloc = alloc;
+fn runDay(alloc: A, comptime module: type, comptime day: usize, data: []const u8, comptime print: bool) !i128 {
+    if (@hasDecl(module, "alloc")) {
+        module.alloc = alloc;
     }
 
     if (print) std.debug.print("day{any}:", .{day});
 
     const start = time.nanoTimestamp();
-    const input = try d.parse(data);
+    const input = try module.parse(data);
     const parse = time.nanoTimestamp() - start;
     if (print) std.debug.print(" parsing:{d:.5}ms", .{@as(f64, @floatFromInt(parse)) / 1000000.0});
 
     const startp1 = time.nanoTimestamp();
-    const s1 = d.solve1(input);
+    const s1 = module.solve1(input);
     const p1 = time.nanoTimestamp() - startp1;
     if (print) std.debug.print(" p1:{d:.5}ms", .{@as(f64, @floatFromInt(p1)) / 1000000.0});
 
-    if (@hasDecl(d, "parse2")) {
+    if (@hasDecl(module, "parse2")) {
         const startparse2 = time.nanoTimestamp();
-        const input2 = try d.parse2(data);
+        const input2 = try module.parse2(data);
         const parse2 = time.nanoTimestamp() - startparse2;
         if (print) std.debug.print(" parsing2:{d:.5}ms", .{@as(f64, @floatFromInt(parse2)) / 1000000.0});
         const startp2 = time.nanoTimestamp();
-        const s2 = d.solve2(input2);
+        const s2 = module.solve2(input2);
         const p2 = time.nanoTimestamp() - startp2;
         if (print) std.debug.print(" p2:{d:.5}ms\n", .{@as(f64, @floatFromInt(p2)) / 1000000.0});
         if (print) std.debug.print("day{any}: p1: {any} p2: {any}\n", .{ day, s1, s2 });
         return parse + p1 + parse2 + p2;
     } else {
         const startp2 = time.nanoTimestamp();
-        const s2 = d.solve2(input);
+        const s2 = module.solve2(input);
         const p2 = time.nanoTimestamp() - startp2;
         if (print) std.debug.print(" p2:{d:.5}ms\n", .{@as(f64, @floatFromInt(p2)) / 1000000.0});
         if (print) std.debug.print("day{any}: p1: {any} p2: {any}\n", .{ day, s1, s2 });
@@ -89,6 +94,7 @@ fn run(alloc: A, comptime d: type, comptime day: usize, comptime input_path: []c
     }
 }
 
+/// Statistical benchmark results for a single day
 const DayBench = struct {
     min: i128,
     max: i128,
@@ -97,7 +103,8 @@ const DayBench = struct {
     stddev: i128,
 };
 
-fn bench(alloc: A, n: usize) !void {
+/// Runs statistical benchmarks on all day solutions.
+pub fn bench(comptime days: anytype, alloc: A, n: usize) !void {
     var res = std.mem.zeroes([days.len]DayBench);
     var totals_list: std.array_list.Aligned(i128, null) = .empty;
     defer totals_list.deinit(alloc);
@@ -110,9 +117,12 @@ fn bench(alloc: A, n: usize) !void {
         var runs_list: std.array_list.Aligned(i128, null) = .empty;
         defer runs_list.deinit(alloc);
 
+        const input_data = try readInput(info.input_path);
+        defer std.heap.page_allocator.free(input_data);
+
         for (0..n - 1) |j| {
             var arena = std.heap.ArenaAllocator.init(alloc);
-            const t = try run(arena.allocator(), info.module, info.day, info.input_path, false);
+            const t = try runDay(arena.allocator(), info.module, info.day, input_data, false);
             arena.deinit();
             try runs_list.append(alloc, t);
             totals[j] += t;
@@ -147,7 +157,14 @@ fn bench(alloc: A, n: usize) !void {
     std.debug.print("├────────┼────────────┼────────────┼────────────┼────────────┼────────────┤\n", .{});
     inline for (days, 0..) |info, idx| {
         const b = res[idx];
-        std.debug.print("│{d: ^8}│{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │\n", .{ info.day, @as(f64, @floatFromInt(b.min)) / 1000000.0, @as(f64, @floatFromInt(b.max)) / 1000000.0, @as(f64, @floatFromInt(b.mean)) / 1000000.0, @as(f64, @floatFromInt(b.median)) / 1000000.0, @as(f64, @floatFromInt(b.stddev)) / 1000000.0 });
+        std.debug.print("│{d: ^8}│{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │\n", .{
+            info.day,
+            @as(f64, @floatFromInt(b.min)) / 1000000.0,
+            @as(f64, @floatFromInt(b.max)) / 1000000.0,
+            @as(f64, @floatFromInt(b.mean)) / 1000000.0,
+            @as(f64, @floatFromInt(b.median)) / 1000000.0,
+            @as(f64, @floatFromInt(b.stddev)) / 1000000.0,
+        });
         std.debug.print("├────────┼────────────┼────────────┼────────────┼────────────┼────────────┤\n", .{});
     }
     std.sort.insertion(i128, totals, void{}, std.sort.asc(i128));
@@ -166,11 +183,19 @@ fn bench(alloc: A, n: usize) !void {
     stddev = @divFloor(stddev, totals.len - 1);
     stddev = @as(i128, @intFromFloat(std.math.floor(std.math.sqrt(@as(f64, @floatFromInt(stddev))))));
 
-    std.debug.print("│  Total │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │\n", .{ @as(f64, @floatFromInt(min)) / 1000000.0, @as(f64, @floatFromInt(max)) / 1000000.0, @as(f64, @floatFromInt(mean)) / 1000000.0, @as(f64, @floatFromInt(median)) / 1000000.0, @as(f64, @floatFromInt(stddev)) / 1000000.0 });
+    std.debug.print("│  Total │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │\n", .{
+        @as(f64, @floatFromInt(min)) / 1000000.0,
+        @as(f64, @floatFromInt(max)) / 1000000.0,
+        @as(f64, @floatFromInt(mean)) / 1000000.0,
+        @as(f64, @floatFromInt(median)) / 1000000.0,
+        @as(f64, @floatFromInt(stddev)) / 1000000.0,
+    });
     std.debug.print("└────────┴────────────┴────────────┴────────────┴────────────┴────────────┘\n", .{});
 }
 
-fn heap() !void {
+/// Analyzes minimum heap requirements for each day solution.
+/// Uses binary search to find the smallest buffer size that allows successful execution.
+pub fn heap(comptime days: anytype) !void {
     const start_heap = 5000000;
     var good_heap: usize = start_heap;
     var bad_heap: usize = 0;
@@ -185,12 +210,16 @@ fn heap() !void {
         h = start_heap;
         good_heap = h;
         bad_heap = 0;
+        const input_data = try readInput(info.input_path);
+        defer std.heap.page_allocator.free(input_data);
+
         const heap_size = while (true) {
             const buffer = try std.heap.page_allocator.alloc(u8, h);
+            defer std.heap.page_allocator.free(buffer);
             var fba = std.heap.FixedBufferAllocator.init(buffer);
             const alloc = fba.allocator();
 
-            if (run(alloc, info.module, info.day, info.input_path, false)) |_| {
+            if (runDay(alloc, info.module, info.day, input_data, false)) |_| {
                 good_heap = h;
                 h -= (good_heap - bad_heap) / 2;
             } else |_| {
@@ -205,4 +234,10 @@ fn heap() !void {
         total += heap_size;
     }
     std.debug.print("total: {d:.3}MB\n", .{@as(f64, @floatFromInt(total)) / 1000000.0});
+}
+
+fn readInput(path: []const u8) ![]u8 {
+    var file = try std.fs.openFileAbsolute(path, .{ .mode = .read_only });
+    defer file.close();
+    return try file.readToEndAlloc(std.heap.page_allocator, std.math.maxInt(usize));
 }
