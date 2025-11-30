@@ -98,10 +98,10 @@ pub fn energize(input: Grid, mem: []?Pos, start: Pos) !usize {
     for (0..input.g.len) |i| mem[i] = null;
 
     var res: usize = 0;
-    var q = std.ArrayList(Pos).init(alloc);
+    var q = std.array_list.AlignedManaged(Pos, null).init(alloc);
     try q.append(start);
 
-    outer: while (q.popOrNull()) |_p| {
+    outer: while (q.pop()) |_p| {
         var p = _p;
 
         if (mem[p.p]) |*mp| {
@@ -162,7 +162,7 @@ pub fn solve2(input: Grid) !usize {
 }
 
 pub fn parse(input: []const u8) !Grid {
-    var res = std.ArrayList(u8).init(alloc);
+    var res = std.array_list.AlignedManaged(u8, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
     var offset: usize = undefined;
 

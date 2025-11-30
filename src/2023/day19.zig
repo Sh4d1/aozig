@@ -79,14 +79,14 @@ pub fn solve2(input: Game) !usize {
         try hm.put(r.name, r);
     }
 
-    var final = std.ArrayList([]C).init(alloc);
-    const conds = std.ArrayList(C).init(alloc);
+    var final = std.array_list.AlignedManaged([]C, null).init(alloc);
+    const conds = std.array_list.AlignedManaged(C, null).init(alloc);
 
-    var tmp = std.ArrayList(struct { Rule, std.ArrayList(C) }).init(alloc);
+    var tmp = std.array_list.AlignedManaged(struct { Rule, std.array_list.AlignedManaged(C, null) }, null).init(alloc);
     try tmp.append(.{ hm.get("in").?, conds });
 
     outer: while (true) {
-        const c = tmp.popOrNull() orelse break;
+        const c = tmp.pop() orelse break;
         const cur = c[0];
         var cds = c[1];
         for (cur.conds) |cond| {
@@ -189,8 +189,8 @@ pub fn solve2(input: Game) !usize {
 }
 
 pub fn parse(input: []const u8) !Game {
-    var rules = std.ArrayList(Rule).init(alloc);
-    var entries = std.ArrayList(Entry).init(alloc);
+    var rules = std.array_list.AlignedManaged(Rule, null).init(alloc);
+    var entries = std.array_list.AlignedManaged(Entry, null).init(alloc);
     var lines = std.mem.tokenizeSequence(u8, input, "\n\n");
 
     const up = lines.next().?;
@@ -205,7 +205,7 @@ pub fn parse(input: []const u8) !Game {
         const rest = split.next().?;
         var rest_split = std.mem.tokenizeScalar(u8, rest[0 .. rest.len - 1], ',');
 
-        var cond = std.ArrayList(Cond).init(alloc);
+        var cond = std.array_list.AlignedManaged(Cond, null).init(alloc);
         while (rest_split.next()) |rs| {
             if (std.mem.count(u8, rs, ":") > 0) {
                 var rs_split = std.mem.tokenizeScalar(u8, rs, ':');

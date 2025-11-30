@@ -110,11 +110,11 @@ pub fn parse2(input: []const u8) ![]Game {
 }
 
 pub fn parse_all(input: []const u8, p2: bool) ![]Game {
-    var res = std.ArrayList(Game).init(alloc);
+    var res = std.array_list.AlignedManaged(Game, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |l| {
-        var split = std.mem.split(u8, l, " ");
+        var split = std.mem.splitAny(u8, l, " ");
         var cards = std.mem.zeroes([5]u8);
         var hand = std.mem.zeroes([14]u8);
 

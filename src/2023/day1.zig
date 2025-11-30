@@ -53,7 +53,7 @@ pub fn solve2(input: [][]const u8) u32 {
 }
 
 pub fn parse(input: []const u8) ![][]const u8 {
-    var res = std.ArrayList([]const u8).init(std.heap.page_allocator);
+    var res = std.array_list.AlignedManaged([]const u8, null).init(std.heap.page_allocator);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {

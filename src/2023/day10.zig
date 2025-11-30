@@ -198,16 +198,16 @@ pub fn solve2(input: Game) usize {
 }
 
 pub fn parse(input: []const u8) !Game {
-    var res = std.ArrayList([]Cell).init(alloc);
-    var dir_grid = std.ArrayList([]?Dir).init(alloc);
+    var res = std.array_list.AlignedManaged([]Cell, null).init(alloc);
+    var dir_grid = std.array_list.AlignedManaged([]?Dir, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
     var start_x: usize = 0;
     var start_y: usize = 0;
     var i: usize = 0;
 
     while (lines.next()) |l| {
-        var line = std.ArrayList(Cell).init(alloc);
-        var line_dir = std.ArrayList(?Dir).init(alloc);
+        var line = std.array_list.AlignedManaged(Cell, null).init(alloc);
+        var line_dir = std.array_list.AlignedManaged(?Dir, null).init(alloc);
         for (l, 0..) |c, j| {
             const cell = switch (c) {
                 '|' => Cell.Vert,

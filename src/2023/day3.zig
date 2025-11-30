@@ -85,11 +85,11 @@ pub fn solve2(input: [][]Cell) u32 {
 }
 
 pub fn parse(input: []const u8) ![][]Cell {
-    var res = std.ArrayList([]Cell).init(alloc);
+    var res = std.array_list.AlignedManaged([]Cell, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        var cell_line = std.ArrayList(Cell).init(alloc);
+        var cell_line = std.array_list.AlignedManaged(Cell, null).init(alloc);
         for (line, 0..) |c, i| {
             var cell = Cell{ .empty = void{} };
             if (c >= '0' and c <= '9') {

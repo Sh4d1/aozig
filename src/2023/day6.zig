@@ -77,7 +77,7 @@ pub fn parse2(input: []const u8) !Race {
 }
 
 pub fn parse(input: []const u8) ![]Race {
-    var res = std.ArrayList(Race).init(alloc);
+    var res = std.array_list.AlignedManaged(Race, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
     var times = std.mem.tokenizeScalar(u8, std.mem.trim(u8, lines.next().?[5..], " "), ' ');
     var dists = std.mem.tokenizeScalar(u8, std.mem.trim(u8, lines.next().?[9..], " "), ' ');

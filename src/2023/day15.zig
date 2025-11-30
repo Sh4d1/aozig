@@ -26,7 +26,7 @@ const Entry = struct {
 };
 
 const Box = struct {
-    elems: std.ArrayList(Entry),
+    elems: std.array_list.AlignedManaged(Entry, null),
 };
 
 pub fn solve2(input: [][]const u8) !usize {
@@ -62,7 +62,7 @@ pub fn solve2(input: [][]const u8) !usize {
                 }
             } else {
                 boxes[bn] = Box{
-                    .elems = std.ArrayList(Entry).init(alloc),
+                    .elems = std.array_list.AlignedManaged(Entry, null).init(alloc),
                 };
                 try boxes[bn].?.elems.append(.{ .label = label, .n = n });
             }
@@ -78,7 +78,7 @@ pub fn solve2(input: [][]const u8) !usize {
 }
 
 pub fn parse(input: []const u8) ![][]const u8 {
-    var res = std.ArrayList([]const u8).init(alloc);
+    var res = std.array_list.AlignedManaged([]const u8, null).init(alloc);
     const line = std.mem.trim(u8, input, "\n");
     var patterns = std.mem.tokenizeScalar(u8, line, ',');
 

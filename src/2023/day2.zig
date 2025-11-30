@@ -50,11 +50,11 @@ pub fn solve2(input: []Game) u32 {
 }
 
 pub fn parse(input: []const u8) ![]Game {
-    var res = std.ArrayList(Game).init(alloc);
+    var res = std.array_list.AlignedManaged(Game, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        var tries_res = std.ArrayList(Try).init(alloc);
+        var tries_res = std.array_list.AlignedManaged(Try, null).init(alloc);
 
         var split = std.mem.tokenizeScalar(u8, line, ':');
         const id = try std.fmt.parseInt(u32, split.next().?[5..], 10);

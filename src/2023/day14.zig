@@ -153,7 +153,7 @@ pub fn solve2(input: Input) !usize {
 }
 
 pub fn parse(input: []const u8) !Input {
-    var res = std.ArrayList(u8).init(alloc);
+    var res = std.array_list.AlignedManaged(u8, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
     var n: usize = undefined;
 

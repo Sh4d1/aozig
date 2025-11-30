@@ -17,7 +17,7 @@ fn solve(input: []Dig) !usize {
     var x: isize = 0;
     var y: isize = 0;
     var perimeter: isize = 0;
-    var points = std.ArrayList(struct { isize, isize }).init(alloc);
+    var points = std.array_list.AlignedManaged(struct { isize, isize }, null).init(alloc);
 
     for (input) |d| {
         perimeter += d.meters;
@@ -56,7 +56,7 @@ pub fn solve2(input: []Dig) !usize {
 }
 
 pub fn parse(input: []const u8) ![]Dig {
-    var res = std.ArrayList(Dig).init(alloc);
+    var res = std.array_list.AlignedManaged(Dig, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |l| {
@@ -76,7 +76,7 @@ pub fn parse(input: []const u8) ![]Dig {
 }
 
 pub fn parse2(input: []const u8) ![]Dig {
-    var res = std.ArrayList(Dig).init(alloc);
+    var res = std.array_list.AlignedManaged(Dig, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |l| {

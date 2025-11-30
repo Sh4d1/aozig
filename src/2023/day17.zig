@@ -123,7 +123,7 @@ pub fn solve2(input: Grid) !usize {
 }
 
 pub fn parse(input: []const u8) !Grid {
-    var res = std.ArrayList(u8).init(alloc);
+    var res = std.array_list.AlignedManaged(u8, null).init(alloc);
     var offset: ?usize = null;
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 

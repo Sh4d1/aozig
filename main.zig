@@ -2,28 +2,8 @@ const std = @import("std");
 const time = std.time;
 const A = std.mem.Allocator;
 
-const days = [_]type{
-    @import("day1"),
-    @import("day2"),
-    @import("day3"),
-    @import("day4"),
-    @import("day5"),
-    @import("day6"),
-    @import("day7"),
-    @import("day8"),
-    @import("day9"),
-    @import("day10"),
-    @import("day11"),
-    @import("day12"),
-    @import("day13"),
-    @import("day14"),
-    @import("day15"),
-    @import("day16"),
-    @import("day17"),
-    @import("day18"),
-    @import("day19"),
-    @import("day20"),
-};
+const generated_days = @import("days_generated");
+const days = generated_days.days;
 
 pub fn main() !void {
     const args = try std.process.argsAlloc(std.heap.page_allocator);
@@ -51,16 +31,17 @@ pub fn main() !void {
     // const alloc = std.heap.c_allocator;
 
     var total: i128 = 0;
-    inline for (days, 0..) |d, i| {
-        const b = try std.heap.page_allocator.alloc(u8, 100_000_000);
-        var fba = std.heap.FixedBufferAllocator.init(b);
+    inline for (days) |info| {
+        const should_run = if (day) |requested| requested == info.day else true;
+        if (should_run) {
+            const buffer = try std.heap.page_allocator.alloc(u8, 100_000_000);
+            var fba = std.heap.FixedBufferAllocator.init(buffer);
 
-        if (day) |di| {
-            if (di - 1 == i) {
-                _ = try run(fba.allocator(), d, i + 1, true);
+            if (day) |_| {
+                _ = try run(fba.allocator(), info.module, info.day, info.input_path, true);
+            } else {
+                total += try run(fba.allocator(), info.module, info.day, info.input_path, true);
             }
-        } else {
-            total += try run(fba.allocator(), d, i + 1, true);
         }
     }
 
@@ -69,8 +50,8 @@ pub fn main() !void {
     }
 }
 
-fn run(alloc: A, comptime d: type, comptime day: usize, comptime print: bool) !i128 {
-    const data = @embedFile(std.fmt.comptimePrint("src/day{}.txt", .{day}));
+fn run(alloc: A, comptime d: type, comptime day: usize, comptime input_path: []const u8, comptime print: bool) !i128 {
+    const data = @embedFile(input_path);
     if (@hasDecl(d, "alloc")) {
         d.alloc = alloc;
     }
@@ -118,23 +99,25 @@ const DayBench = struct {
 
 fn bench(alloc: A, n: usize) !void {
     var res = std.mem.zeroes([days.len]DayBench);
-    var totals_list = std.ArrayList(i128).init(std.heap.page_allocator);
+    var totals_list: std.array_list.Aligned(i128, null) = .empty;
+    defer totals_list.deinit(alloc);
     for (1..n) |_| {
-        try totals_list.append(0);
+        try totals_list.append(alloc, 0);
     }
-    var totals = try totals_list.toOwnedSlice();
+    var totals = try totals_list.toOwnedSlice(alloc);
 
-    inline for (days, 0..) |d, i| {
-        var runs_list = std.ArrayList(i128).init(std.heap.page_allocator);
+    inline for (days, 0..) |info, idx| {
+        var runs_list: std.array_list.Aligned(i128, null) = .empty;
+        defer runs_list.deinit(alloc);
 
         for (0..n - 1) |j| {
             var arena = std.heap.ArenaAllocator.init(alloc);
-            const t = try run(arena.allocator(), d, i + 1, false);
+            const t = try run(arena.allocator(), info.module, info.day, info.input_path, false);
             arena.deinit();
-            try runs_list.append(t);
+            try runs_list.append(alloc, t);
             totals[j] += t;
         }
-        const runs = try runs_list.toOwnedSlice();
+        const runs = try runs_list.toOwnedSlice(alloc);
         std.sort.insertion(i128, runs, void{}, std.sort.asc(i128));
 
         var b = DayBench{
@@ -155,15 +138,16 @@ fn bench(alloc: A, n: usize) !void {
         for (runs) |rr| b.stddev += (rr - b.mean) * (rr - b.mean);
         b.stddev = @divFloor(b.stddev, n - 1);
         b.stddev = @as(i128, @intFromFloat(std.math.floor(std.math.sqrt(@as(f64, @floatFromInt(b.stddev))))));
-        res[i] = b;
+        res[idx] = b;
     }
 
     std.debug.print("Ran with {} runs\n", .{n});
     std.debug.print("┌────────┬────────────┬────────────┬────────────┬────────────┬────────────┐\n", .{});
     std.debug.print("│  Days  │    Min     │    Max     │    Mean    │   Median   │   Stddev   │\n", .{});
     std.debug.print("├────────┼────────────┼────────────┼────────────┼────────────┼────────────┤\n", .{});
-    for (res, 1..) |b, i| {
-        std.debug.print("│{d: ^8}│{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │\n", .{ i, @as(f64, @floatFromInt(b.min)) / 1000000.0, @as(f64, @floatFromInt(b.max)) / 1000000.0, @as(f64, @floatFromInt(b.mean)) / 1000000.0, @as(f64, @floatFromInt(b.median)) / 1000000.0, @as(f64, @floatFromInt(b.stddev)) / 1000000.0 });
+    inline for (days, 0..) |info, idx| {
+        const b = res[idx];
+        std.debug.print("│{d: ^8}│{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │{d: >8.2}ms  │\n", .{ info.day, @as(f64, @floatFromInt(b.min)) / 1000000.0, @as(f64, @floatFromInt(b.max)) / 1000000.0, @as(f64, @floatFromInt(b.mean)) / 1000000.0, @as(f64, @floatFromInt(b.median)) / 1000000.0, @as(f64, @floatFromInt(b.stddev)) / 1000000.0 });
         std.debug.print("├────────┼────────────┼────────────┼────────────┼────────────┼────────────┤\n", .{});
     }
     std.sort.insertion(i128, totals, void{}, std.sort.asc(i128));
@@ -193,9 +177,9 @@ fn heap() !void {
     var h: usize = start_heap;
     var total: usize = 0;
 
-    inline for (days, 0..) |d, i| {
-        if (!@hasDecl(d, "alloc")) {
-            std.debug.print("day{}: no heap\n", .{i + 1});
+    inline for (days) |info| {
+        if (!@hasDecl(info.module, "alloc")) {
+            std.debug.print("day{}: no heap\n", .{info.day});
             continue;
         }
         h = start_heap;
@@ -206,7 +190,7 @@ fn heap() !void {
             var fba = std.heap.FixedBufferAllocator.init(buffer);
             const alloc = fba.allocator();
 
-            if (run(alloc, d, i + 1, false)) |_| {
+            if (run(alloc, info.module, info.day, info.input_path, false)) |_| {
                 good_heap = h;
                 h -= (good_heap - bad_heap) / 2;
             } else |_| {
@@ -217,7 +201,7 @@ fn heap() !void {
                 break good_heap;
             }
         };
-        std.debug.print("day{}: {d:.3}KB\n", .{ i + 1, @as(f64, @floatFromInt(heap_size)) / 1000.0 });
+        std.debug.print("day{}: {d:.3}KB\n", .{ info.day, @as(f64, @floatFromInt(heap_size)) / 1000.0 });
         total += heap_size;
     }
     std.debug.print("total: {d:.3}MB\n", .{@as(f64, @floatFromInt(total)) / 1000000.0});

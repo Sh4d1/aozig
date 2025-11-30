@@ -66,12 +66,12 @@ pub fn solve2(input: []Row) !usize {
 }
 
 pub fn parse(input: []const u8) ![]Row {
-    var res = std.ArrayList(Row).init(alloc);
+    var res = std.array_list.AlignedManaged(Row, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        var list = std.ArrayList(usize).init(alloc);
-        var pa = std.ArrayList(u8).init(alloc);
+        var list = std.array_list.AlignedManaged(usize, null).init(alloc);
+        var pa = std.array_list.AlignedManaged(u8, null).init(alloc);
         var split = std.mem.tokenizeScalar(u8, line, ' ');
         var lc: ?u8 = null;
         const pattern = split.next().?;
@@ -91,14 +91,14 @@ pub fn parse(input: []const u8) ![]Row {
 }
 
 pub fn parse2(input: []const u8) ![]Row {
-    var res = std.ArrayList(Row).init(alloc);
+    var res = std.array_list.AlignedManaged(Row, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        var patterns = std.ArrayList(u8).init(alloc);
-        var list = std.ArrayList(usize).init(alloc);
-        var pa = std.ArrayList(u8).init(alloc);
-        var final_list = std.ArrayList(usize).init(alloc);
+        var patterns = std.array_list.AlignedManaged(u8, null).init(alloc);
+        var list = std.array_list.AlignedManaged(usize, null).init(alloc);
+        var pa = std.array_list.AlignedManaged(u8, null).init(alloc);
+        var final_list = std.array_list.AlignedManaged(usize, null).init(alloc);
 
         var split = std.mem.tokenizeScalar(u8, line, ' ');
         const i_pattern = split.next().?;

@@ -127,19 +127,19 @@ pub fn solve2(input: Almanac) !usize {
 pub fn parse(input: []const u8) !Almanac {
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
-    var seeds = std.ArrayList(usize).init(alloc);
+    var seeds = std.array_list.AlignedManaged(usize, null).init(alloc);
     var seeds_split = std.mem.tokenizeScalar(u8, std.mem.trim(u8, lines.next().?[6..], " "), ' ');
     while (seeds_split.next()) |seed| {
         try seeds.append(try std.fmt.parseInt(usize, seed, 10));
     }
 
-    var maps = std.ArrayList([]Map).init(alloc);
-    var map = std.ArrayList(Map).init(alloc);
+    var maps = std.array_list.AlignedManaged([]Map, null).init(alloc);
+    var map = std.array_list.AlignedManaged(Map, null).init(alloc);
     while (lines.next()) |line| {
         if (line[line.len - 1] == ':') {
             if (map.items.len > 0) {
                 try maps.append(try map.toOwnedSlice());
-                map = std.ArrayList(Map).init(alloc);
+                map = std.array_list.AlignedManaged(Map, null).init(alloc);
             }
             continue;
         }
@@ -151,7 +151,7 @@ pub fn parse(input: []const u8) !Almanac {
         });
     }
     try maps.append(try map.toOwnedSlice());
-    map = std.ArrayList(Map).init(alloc);
+    map = std.array_list.AlignedManaged(Map, null).init(alloc);
 
     return Almanac{
         .seeds = try seeds.toOwnedSlice(),

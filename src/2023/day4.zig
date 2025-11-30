@@ -48,7 +48,7 @@ pub fn solve2(input: []Card) u32 {
 }
 
 pub fn parse(input: []const u8) ![]Card {
-    var res = std.ArrayList(Card).init(alloc);
+    var res = std.array_list.AlignedManaged(Card, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
@@ -64,7 +64,7 @@ pub fn parse(input: []const u8) ![]Card {
             try winnig_list.put(try std.fmt.parseInt(u32, w, 10), void{});
         }
 
-        var my_numbers_list = std.ArrayList(u32).init(alloc);
+        var my_numbers_list = std.array_list.AlignedManaged(u32, null).init(alloc);
         while (my_numbers.next()) |mn| {
             try my_numbers_list.append(try std.fmt.parseInt(u32, mn, 10));
         }

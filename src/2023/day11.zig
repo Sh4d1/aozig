@@ -40,7 +40,7 @@ pub fn expand(input: [][]Cell, n: usize) ![]Point {
         }
     }
 
-    var res = std.ArrayList(Point).init(alloc);
+    var res = std.array_list.AlignedManaged(Point, null).init(alloc);
     var delta_x: usize = 0;
     for (input, 0..) |l, i| {
         if (input[i][0] == Cell.void) {
@@ -83,11 +83,11 @@ pub fn solve2(input: [][]Cell) !usize {
     return res;
 }
 pub fn parse(input: []const u8) ![][]Cell {
-    var res = std.ArrayList([]Cell).init(alloc);
+    var res = std.array_list.AlignedManaged([]Cell, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        var cell_line = std.ArrayList(Cell).init(alloc);
+        var cell_line = std.array_list.AlignedManaged(Cell, null).init(alloc);
         for (line) |c| {
             var cell = Cell.empty;
             if (c == '#') {

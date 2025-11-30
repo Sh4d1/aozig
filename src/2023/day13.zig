@@ -45,12 +45,12 @@ pub fn solve2(input: [][][]const u8) !usize {
 }
 
 pub fn parse(input: []const u8) ![][][]const u8 {
-    var res = std.ArrayList([][]const u8).init(alloc);
+    var res = std.array_list.AlignedManaged([][]const u8, null).init(alloc);
     var patterns = std.mem.splitSequence(u8, input, "\n\n");
 
     while (patterns.next()) |lines| {
         var l = std.mem.tokenizeScalar(u8, lines, '\n');
-        var grid = std.ArrayList([]const u8).init(alloc);
+        var grid = std.array_list.AlignedManaged([]const u8, null).init(alloc);
 
         while (l.next()) |line| {
             try grid.append(line);

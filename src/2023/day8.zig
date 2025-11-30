@@ -60,7 +60,7 @@ fn getKey(n: []const u8) usize {
 }
 
 pub fn parse(input: []const u8) !Game {
-    var res = std.ArrayList(Dir).init(alloc);
+    var res = std.array_list.AlignedManaged(Dir, null).init(alloc);
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     for (lines.next().?) |c| {
