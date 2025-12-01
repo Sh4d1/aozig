@@ -119,11 +119,27 @@ pub const Context = struct {
         }
     }
 
-    /// Download missing puzzle inputs from adventofcode.com
-    pub fn ensureInputs(ctx: *Context) !void {
+    /// Queue steps to download missing inputs via the fetcher executable
+    pub fn ensureInputs(
+        ctx: *Context,
+        fetch_exe: *std.Build.Step.Compile,
+        run_step: *std.Build.Step,
+        test_step: *std.Build.Step,
+        install_step: *std.Build.Step,
+        run_artifact_step: *std.Build.Step,
+    ) void {
         for (ctx.day_sources.items) |source| {
             std.fs.Dir.access(std.fs.cwd(), source.input_path, .{}) catch {
-                try fetchInput(ctx, ctx.year, source.day, source.input_path);
+                const fetch_cmd = ctx.b.addRunArtifact(fetch_exe);
+                fetch_cmd.addArgs(&.{
+                    ctx.b.fmt("{}", .{ctx.year}),
+                    ctx.b.fmt("{}", .{source.day}),
+                    source.input_abs,
+                });
+                run_step.dependOn(&fetch_cmd.step);
+                test_step.dependOn(&fetch_cmd.step);
+                install_step.dependOn(&fetch_cmd.step);
+                run_artifact_step.dependOn(&fetch_cmd.step);
             };
         }
     }
@@ -265,6 +281,18 @@ pub fn defaultBuild(b: *std.Build, config: Config) !void {
         if (config.runtime_dependency) |dep| break :blk dep.module("aozig");
         break :blk b.createModule(.{ .root_source_file = b.path("src/aozig/aozig.zig") });
     };
+    const fetch_source = blk: {
+        if (config.runtime_dependency) |dep| break :blk dep.path("src/aozig/fetch_inputs.zig");
+        break :blk b.path("src/aozig/fetch_inputs.zig");
+    };
+    const fetch_inputs_exe = b.addExecutable(.{
+        .name = "aozig_fetch_inputs",
+        .root_module = b.createModule(.{
+            .root_source_file = fetch_source,
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
 
     const root_module = b.createModule(.{
         .root_source_file = ctx.generatedMain(),
@@ -289,12 +317,13 @@ pub fn defaultBuild(b: *std.Build, config: Config) !void {
         return;
     }
 
-    b.installArtifact(exe);
-    try ctx.ensureInputs();
-    _ = try ctx.installDayModules(root_module, runtime_module, "days_generated");
-
     const run_cmd = b.addRunArtifact(exe);
     ctx.addRunArgs(run_cmd);
+
+    b.installArtifact(exe);
+    ctx.ensureInputs(fetch_inputs_exe, run_step, test_step, install_step, &run_cmd.step);
+    _ = try ctx.installDayModules(root_module, runtime_module, "days_generated");
+
     run_step.dependOn(&run_cmd.step);
 
     ctx.addDayTests(test_step, runtime_module);
@@ -351,46 +380,4 @@ fn testDay(ctx: *Context, source: DaySource, step: *std.Build.Step, runtime_modu
     const run_unit_tests = ctx.b.addRunArtifact(unit_tests);
     run_unit_tests.step.dependOn(ctx.b.getInstallStep());
     step.dependOn(&run_unit_tests.step);
-}
-
-fn fetchInput(ctx: *Context, year: usize, day: usize, path: []const u8) !void {
-    const allocator = std.heap.page_allocator;
-    var client = std.http.Client{
-        .allocator = allocator,
-    };
-    const uri = std.Uri.parse(ctx.b.fmt("https://adventofcode.com/{}/day/{}/input", .{ year, day })) catch unreachable;
-
-    var buffer: [128]u8 = undefined;
-    const token = std.fs.cwd().readFile(".token", &buffer) catch |err| {
-        std.log.err("Failed to read .token file: {}", .{err});
-        std.log.err("", .{});
-        std.log.err("To download puzzle inputs automatically, create a .token file", .{});
-        std.log.err("containing your Advent of Code session cookie.", .{});
-        std.log.err("", .{});
-        std.log.err("Steps:", .{});
-        std.log.err("  1. Log in to https://adventofcode.com", .{});
-        std.log.err("  2. Open browser DevTools (F12)", .{});
-        std.log.err("  3. Go to Application/Storage > Cookies", .{});
-        std.log.err("  4. Copy the value of the 'session' cookie", .{});
-        std.log.err("  5. Save it to a file named .token in your project root", .{});
-        std.log.err("", .{});
-        return err;
-    };
-
-    const cookie_header = std.http.Header{ .name = "cookie", .value = ctx.b.fmt("session={s}", .{token}) };
-
-    const input_file = try std.fs.cwd().createFile(path, .{});
-    defer input_file.close();
-    var file_writer = input_file.writer(&.{});
-
-    const resp = try client.fetch(.{
-        .method = .GET,
-        .extra_headers = &[_]std.http.Header{cookie_header},
-        .location = .{ .uri = uri },
-        .response_writer = &file_writer.interface,
-    });
-    if (resp.status.class() != .success) {
-        std.log.err("Failed to download input file: {}", .{resp.status});
-        return error.HTTPError;
-    }
 }
