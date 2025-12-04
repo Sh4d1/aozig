@@ -1,6 +1,8 @@
 /// aozig - A framework for solving Advent of Code puzzles in Zig
 const build_impl = @import("aozig_build.zig");
 const runtime_impl = @import("runtime.zig");
+const grid_impl = @import("grid.zig");
+const fifo_impl = @import("fifo.zig");
 
 /// Build configuration options for aozig
 pub const Config = build_impl.Config;
@@ -22,3 +24,9 @@ pub const bench = runtime_impl.bench;
 
 /// Heap analyzer for finding minimum memory requirements
 pub const heap = runtime_impl.heap;
+
+/// Utility helpers for working with 2D grids
+pub const grid = grid_impl;
+
+/// FIFO queue helper utilities
+pub const fifo = fifo_impl;
