@@ -3,6 +3,7 @@ const build_impl = @import("aozig_build.zig");
 const runtime_impl = @import("runtime.zig");
 const grid_impl = @import("grid.zig");
 const fifo_impl = @import("fifo.zig");
+const range_impl = @import("range.zig");
 
 /// Build configuration options for aozig
 pub const Config = build_impl.Config;
@@ -30,3 +31,6 @@ pub const grid = grid_impl;
 
 /// FIFO queue helper utilities
 pub const fifo = fifo_impl;
+
+/// Range helpers for inclusive integer intervals
+pub const range = range_impl;

@@ -233,31 +233,29 @@ const day_template =
     \\const std = @import("std");
     \\const aozig = @import("aozig");
     \\
-    \\pub var alloc: std.mem.Allocator = undefined;
+    \\pub var alloc: std.mem.Allocator = std.heap.page_allocator;
     \\
-    \\pub fn parse(input: []const u8) !void {{
-    \\    _ = input;
-    \\    // TODO: Parse input
-    \\}}
+    \\const T = undefined;
     \\
-    \\pub fn solve1(_: void) usize {{
-    \\    // TODO: Solve part 1
+    \\pub fn parse(input: []const u8) !T {
+    \\}
+    \\
+    \\pub fn solve1(input: T) !usize {
     \\    return 0;
-    \\}}
+    \\}
     \\
-    \\pub fn solve2(_: void) usize {{
-    \\    // TODO: Solve part 2
+    \\pub fn solve2(input: T) !usize {
     \\    return 0;
-    \\}}
+    \\}
     \\
-    \\test "example" {{
+    \\test "example" {
     \\    const input =
     \\        \\
     \\    ;
-    \\    _ = try parse(input);
-    \\    try std.testing.expectEqual(@as(usize, 0), solve1({{}}));
-    \\    try std.testing.expectEqual(@as(usize, 0), solve2({{}}));
-    \\}}
+    \\    const parsed = try parse(input);
+    \\    try std.testing.expectEqual(@as(usize, 0), try solve1(parsed));
+    \\    try std.testing.expectEqual(@as(usize, 0), try solve2(parsed));
+    \\}
     \\
 ;
 
